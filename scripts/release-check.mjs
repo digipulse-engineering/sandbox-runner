@@ -17,8 +17,7 @@ export function checkRelease({ tag, packageJson, packageLock, changelog }) {
   if (packageLock.version !== version || packageLock.packages?.[""]?.version !== version) {
     throw new Error(`package-lock.json does not hold version ${version}. Set the version with npm version.`);
   }
-  const escaped = version.replace(/[.+-]/g, "\\$&");
-  if (!new RegExp(`^## ${escaped}(?:[ \\t]|$)`, "m").test(changelog)) {
+  if (!new RegExp(`^## ${RegExp.escape(version)}(?:[ \\t]|$)`, "m").test(changelog)) {
     throw new Error(`CHANGELOG.md has no "## ${version}" section.`);
   }
   // Prereleases go to "next" so that a plain install keeps the latest stable version.
