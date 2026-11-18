@@ -52,11 +52,11 @@ Containers start with internet access disabled. The only destinations are hosts 
 
 ### MCP connectors follow per-run rules
 
-- The gateway forwards only `initialize`, `ping`, `tools/list` and `tools/call`.
+- The gateway forwards only `initialize`, `notifications/initialized`, `ping`, `tools/list` and `tools/call`.
 - A tool call must match a rule: exact values for the pinned arguments, and only the other argument names the rule allows. Tool discovery shows only the allowed tools.
 - Review runs get the read rules only. A rule cannot be both read and write.
 - A write is claimed once per request ID. Once a run has claimed a write, the Worker does not retry it through another authentication route.
-- A reply that echoes the connector's token is rejected.
+- A reply that contains the connector's token verbatim is rejected. An encoded or split copy is not detected.
 
 ### Publication goes through the Worker
 
@@ -72,21 +72,21 @@ The container never holds a credential that can write to GitHub.
 - Each run, and each authentication attempt of a run, gets its own Durable Object and its own container.
 - Results are stored outside the container.
 - At the end of a run, the Worker destroys the container and verifies that it is gone. It retries on failure and records `cleanup: "failed"` if it cannot confirm.
-- Agent CLIs, test commands and the checkout helper run as an unprivileged user (uid 10001).
+- Agent CLIs, test commands and the checkout run as an unprivileged user (uid 10001). The publication snapshot and export steps run as root, after every agent process has exited.
 
 ### Callers are authenticated and separated
 
-- The control token and team tokens are compared as SHA-256 digests in constant time. The Worker stores only the digests of team tokens. A failed authentication gets a 404.
+- The control token and team tokens are compared as SHA-256 digests in constant time. The Worker stores only the digests of team tokens. A request with a missing or wrong runner token gets a 404.
 - A team client can submit only the profiles the operator published for it, and can read, list and cancel only its own runs. A `readOnly` client cannot start or cancel anything.
 - The admission guard token can only freeze and reopen admissions. It cannot submit runs, and the control token cannot operate the guard.
-- The remote MCP endpoint (`/mcp`) exists only behind Cloudflare Access. The Worker checks the Access audience, maps the verified email to one team client, and never grants operator rights on this route.
+- The remote MCP endpoint (`/mcp`) exists only behind Cloudflare Access. The Worker checks the Access audience, maps the verified email to one team client, and never grants operator rights on this route. Browser requests are accepted only from the Worker's own origin and from `chatgpt.com`.
 
 ### The supply chain is pinned
 
 - Base images are pinned by digest. OpenCode, pnpm and the Go modules are verified against hashes.
 - The Agents SDK runtime is pinned to a commit, and deployment refuses another one.
 - GitHub Actions are pinned by commit. Releases are staged on npm from CI with a provenance statement and need a maintainer's approval with two-factor authentication. See [RELEASING.md](../RELEASING.md).
-- The repository runs CodeQL, secret scanning and Dependabot.
+- The public repository is configured to run CodeQL, secret scanning and Dependabot. These are repository settings, so a fork does not inherit them.
 
 ## What you cannot expect
 
@@ -100,9 +100,11 @@ These limits are part of the design or are not solved yet. Plan for them.
 - **A connector write may be applied once even if the run then fails.** Check the upstream system before you submit the run again.
 - **No spending limit is enforced.** Set limits with your model provider. No agent deadline applies unless you configure one.
 - **Run output is stored as the agent produced it.** It can contain anything the agent read, and nothing redacts it. Treat it as untrusted data when you display it or pass it to another agent.
-- **Workers logs are off by default.** There is no audit log beyond the stored runs.
+- **Run data is kept until you remove the installation.** Results, events and the run index stay in Durable Object storage. Nothing expires them.
+- **A delayed cleanup may leave a workspace snapshot.** The agent runtime can save the container's filesystem when a container stops idle. A normal run destroys its container first. This path has not been ruled out when cleanup is delayed or fails.
+- **Workers logs are off by default.** The only audit records are the stored runs and the log of refused team requests.
 - **Claude Code and Codex are installed in the image by version, without an integrity hash.** Their dependencies are resolved when the image is built.
-- **The container's supervising daemon runs as root** inside the container. Only the agent, the checkout and the test processes drop to the unprivileged user.
+- **The container's supervising daemon runs as root** inside the container, as do the publication snapshot and export steps. The agent, the checkout and the test processes drop to the unprivileged user.
 - **Isolation between containers is Cloudflare's.** Sandbox Runner relies on the isolation of Cloudflare Containers and adds none of its own.
 - **Access protects only what you put behind it.** Without `cloudflare access enable`, the Worker's routes rely on runner tokens alone, and Worker-to-Worker service bindings bypass Access.
 - **Checkout requires a private repository** on the allowlist. Public repositories are refused.
@@ -112,7 +114,7 @@ These limits are part of the design or are not solved yet. Plan for them.
 
 | Principle | Where |
 | --- | --- |
-| Least privilege | Tokens scoped to one repository and one permission; one model path per provider; team clients limited to granted profiles |
+| Least privilege | Checkout tokens scoped to one repository with read access to contents (the GitHub connector token adds issues access); one model path per provider; team clients limited to granted profiles |
 | Deny by default | No internet in the container; unknown routes, tools and arguments are refused |
 | Complete mediation | Every outbound request from the container passes through the Worker |
 | Separation of duties | Separate tokens for control, admission guard and each team client; the agent proposes changes and the Worker publishes them |
@@ -155,6 +157,6 @@ The [OWASP Top 10 for Agentic Applications](https://genai.owasp.org/resource/owa
 
 ## Did we do a good enough job?
 
-- Each guarantee above has tests in `worker/tests/` and `test/`, including the refusal paths.
-- Every change to `main` passes the test suites, an image build and CodeQL.
+- The Worker and CLI test suites in `worker/tests/` and `test/` cover these controls, including refusal paths. Not every sentence here maps to a named test.
+- On the public repository, every change to `main` must pass the test suites, an image build and CodeQL.
 - This document is reviewed against the code when the design changes. If you find a claim the code does not support, report it as a vulnerability.

@@ -18,18 +18,18 @@ flowchart LR
 
 What it does:
 
-- Runs Claude Code, Codex and OpenCode on a commit of a private GitHub repository, and can publish the result as a branch.
+- Runs Claude Code, Codex and OpenCode on a commit of a private GitHub repository. Claude Code and Codex runs can publish their result as a branch.
 - Runs an independent review of a commit with a different agent, with read-only connector access.
 - Runs a repository's Vitest suite or a fixed test command, with the network closed during the tests.
 - Lets agents use MCP connectors through rules that pin the tools and arguments each run may use.
 - Shares saved run profiles with a team, each client limited to the profiles you grant.
-- Serves a CLI, a local MCP server, and a remote MCP endpoint behind Cloudflare Access for web clients such as ChatGPT and Claude.
+- Serves a CLI, a local MCP server, and a remote MCP endpoint behind Cloudflare Access for clients such as ChatGPT and Claude.
 
 Read the [security model](docs/security.md) for what is protected and what is not.
 
 ## Quick start
 
-You need Node.js 24 or later, Bun, Git, Docker and a Cloudflare account on the Workers Paid plan.
+You need Node.js 24 or later, Bun, Git, Docker and a Cloudflare account on the Workers Paid plan, which [Cloudflare Containers](https://developers.cloudflare.com/containers/pricing/) require.
 
 ```sh
 npm install --global sandbox-runner-cli
