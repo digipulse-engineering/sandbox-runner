@@ -45,6 +45,13 @@ npm can only trust the workflow once the package exists. Publish the first versi
    - **Environment:** `npm`
    - **Allowed actions:** staged publishing only
 
+   With npm 11.15.0 or later, the same configuration from a terminal is:
+
+   ```sh
+   npm trust github sandbox-runner-cli --file release.yml \
+     --repo digipulse-engineering/sandbox-runner --env npm --allow-stage-publish
+   ```
+
    npm does not check this configuration when you save it. A new trusted publisher must complete its first publish within two days, so push the next tag soon after saving it.
 4. In the package's publishing access settings, select **Require two-factor authentication and disallow tokens**. Trusted publishing keeps working.
 5. In the GitHub repository settings, open the `npm` environment and allow deployments from tags matching `v*` only. GitHub creates the environment on the first workflow run if it does not exist yet.
