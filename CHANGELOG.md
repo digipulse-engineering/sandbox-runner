@@ -9,4 +9,5 @@ First public release. Sandbox Runner runs Claude Code, Codex and OpenCode agents
 - A CLI and a stdio MCP server submit runs, follow them and fetch their results; a remote MCP endpoint behind Cloudflare Access serves web clients such as ChatGPT and Claude.
 - The Worker holds the provider credentials and adds them on the allowed outbound routes; agents reach MCP connectors through per-run policies.
 - Saved and team-shared run profiles, with a team catalog of clients, profiles and optional read-only clients.
+- People reach the remote MCP endpoint with their own Cloudflare Access sign-in from ChatGPT, claude.ai, Claude Code or Codex. `cloudflare access enable` accepts loopback redirects for native clients unless `--web-clients-only` is passed.
 - Installations are created with `cloudflare setup`, configured in `sandbox-runner.project.json`, upgraded with `cloudflare upgrade` behind an admission guard, and protected with `cloudflare access enable`.
