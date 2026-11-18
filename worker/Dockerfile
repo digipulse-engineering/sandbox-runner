@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.26.11-bookworm@sha256:dc40a13b61304647ed7e5d581d246b86413dfc29d63c6d018310feb93cd98fc0 AS checkout-build
+FROM --platform=$BUILDPLATFORM golang:1.27.4-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea AS checkout-build
 ARG TARGETOS TARGETARCH
 WORKDIR /src
 ENV GOTOOLCHAIN=local GOPROXY=https://proxy.golang.org GOSUMDB=sum.golang.org GOVCS=*:off
@@ -9,14 +9,14 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOPROXY=off \
     go build -trimpath -buildvcs=false -ldflags '-buildid=' -o /sandbox-runner-checkout .
 
-FROM --platform=$BUILDPLATFORM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS opencode-build
+FROM --platform=$BUILDPLATFORM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS opencode-build
 WORKDIR /tmp/opencode
 RUN npm pack --ignore-scripts --registry=https://registry.npmjs.org @opencode/cli-linux-x64@2.2.7 \
     && echo "c24fc33c7c6be266a25be166429f33b685e5a3fbc2e6ab261081ec2cd68d2d92f689a2187e1caa1517ba091b02571cbe89bd2c7cad3b5f621ea45c3b6522aa35  opencode-cli-linux-x64-2.2.7.tgz" | sha512sum -c - \
     && tar -xOzf opencode-cli-linux-x64-2.2.7.tgz package/bin/opencode > /opencode \
     && echo "589253d36810f21217edd51545cd435b328cdc3cf4f451fbe0cce6f88afcf5e1  /opencode" | sha256sum -c -
 
-FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
+FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1
 RUN npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.289 \
     && claude --version \
     && npm cache clean --force
