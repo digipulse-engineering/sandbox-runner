@@ -54,3 +54,16 @@ test("does not install Git authority after a delayed inactivity update crosses t
   setup.resolve();
   await assert.rejects(configure, /teardown/);
 });
+
+test("refuses workspace snapshots and never restores one", async () => {
+  const calls = [];
+  class NativeContainer {
+    start(options) { calls.push(["start", options]); }
+    async snapshotContainer() { calls.push(["snapshot"]); return { id: "saved" }; }
+  }
+  const container = guardedContainerStart(new NativeContainer(), () => true);
+  await assert.rejects(container.snapshotContainer({ name: "workspace-1" }), /disabled/);
+  container.start({ enableInternet: false, containerSnapshot: { id: "saved" } });
+  container.start();
+  assert.deepEqual(calls, [["start", { enableInternet: false }], ["start", undefined]]);
+});
