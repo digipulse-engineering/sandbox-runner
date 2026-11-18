@@ -38,7 +38,8 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: docker
-    directories: ["/worker", "/worker/vitest"]
+    # The Vitest qualification image uses the same pinned Node base. Its fixture project stays frozen.
+    directories: ["/worker", "/worker/vitest", "/worker/qualification/vitest"]
     schedule:
       interval: weekly
     cooldown:

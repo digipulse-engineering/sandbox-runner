@@ -55,6 +55,6 @@ npm can only trust the workflow once the package exists. Publish the first versi
    npm does not check this configuration when you save it. A new trusted publisher must complete its first publish within two days, so push the next tag soon after saving it.
 4. In the package's publishing access settings, select **Require two-factor authentication and disallow tokens**. Trusted publishing keeps working.
 5. In the GitHub repository settings, open the `npm` environment and allow deployments from tags matching `v*` only. GitHub creates the environment on the first workflow run if it does not exist yet.
-6. Add a tag ruleset for `v*` that lets only maintainers create, update or delete those tags. The workflow runs from the tagged commit, so anyone who can push a `v*` tag can stage a package, and your approval would be the only check left.
+6. Add a tag ruleset for `v*` that lets only repository administrators create, update or delete those tags. The workflow runs from the tagged commit, so anyone who can push a `v*` tag can stage a package, and your approval would be the only check left.
 
 `repository.url` in `package.json` must name this GitHub repository, or npm refuses the publish. Forks that publish their own package must change it.
