@@ -1,0 +1,102 @@
+{
+  "scope": "Cloudflare hosted native Durable Object Container API with image-preseeded synthetic Git source",
+  "candidate": "be86330b383ff0c3634816ca37f6e6ed8ac35ffd",
+  "cfVersion": "1.0.0-beta.29",
+  "worker": {
+    "name": "sandbox-runner-vitest-q-g0le2u",
+    "version": "0bffdb5f-7161-496e-bfec-ca49fae3a45e",
+    "trafficPercentage": 100,
+    "secretBindingNames": [
+      "VITEST_QUALIFICATION_TOKEN"
+    ]
+  },
+  "application": {
+    "id": "<application-id>",
+    "name": "sandbox-runner-vitest-q-g0le2u",
+    "scheduling_policy": "durable_object"
+  },
+  "image": {
+    "repository": "cloudflare-build/<registry-namespace>/sandbox-runner-vitest-q-g0le2u-base",
+    "tag": "e65c03583531",
+    "digest": "sha256:0aa279d0ab36b6180f80c66fa0f6ffe224adf184512691bfb9b46aca7bdf3b4f"
+  },
+  "run": {
+    "id": "e99abb2f-898c-4639-9124-52f9d6c8b7d9",
+    "status": "succeeded",
+    "cleanup": "destroyed",
+    "phase": "complete",
+    "sourceScope": "image-preseeded-synthetic-git",
+    "fixtureCommit": "a8d19de9fe51ac776e61145f15011839974f919c",
+    "internetAtStart": false,
+    "nodeVersion": "v24.22.2",
+    "install": {
+      "exitCode": 0,
+      "stdout": {
+        "text": "\nadded 35 packages in 2s\n",
+        "bytes": 25
+      },
+      "stderr": {
+        "text": "",
+        "bytes": 0
+      }
+    },
+    "registrySealed": true,
+    "registryRequests": 35,
+    "vitestVersion": "5.1.0",
+    "pass": {
+      "exitCode": 0,
+      "stdout": {
+        "text": "\n RUN  v5.1.0 /workspace\n\nstdout | offline.test.mjs > direct public IP cannot establish DNS-over-TLS\nQUALIFICATION_DIRECT_IP_TLS_BLOCKED { tcpConnected: true, outcome: 'ECONNRESET' }\n\nstdout | offline.test.mjs\nQUALIFICATION_LOOPBACK_OK\n\nstdout | offline.test.mjs\nQUALIFICATION_REGISTRY_SEALED\n\nstdout | offline.test.mjs\nQUALIFICATION_DNS_BLOCKED { defaultResolver: 'deadline', publicResolver: 'deadline' }\n\nstdout | offline.test.mjs\nQUALIFICATION_DIRECT_DOT_BLOCKED { tcpConnected: false, outcome: 'deadline' }\n\nstdout | offline.test.mjs > an HTTPS request cannot reach the external witness\nQUALIFICATION_HTTPS_WITNESS_BLOCKED\n\n ✓ offline.test.mjs (6 tests) 6030ms\n   ✓ DNS outside the registry route is blocked 3024ms\n   ✓ direct public IP cannot establish DNS-over-TLS 3025ms\n   ✓ an HTTPS request cannot reach the external witness 3003ms\nstdout | pass.test.mjs > the qualification fixture passes\nQUALIFICATION_PASS_STDOUT\n\n ✓ pass.test.mjs (1 test) 4ms\n\n Test Files  2 passed (2)\n      Tests  7 passed (7)\n   Start at  01:40:34\n   Duration  6.38s (tests 98%, import 1%, transform 1%)\n\n",
+        "bytes": 1098
+      },
+      "stderr": {
+        "text": "",
+        "bytes": 0
+      }
+    },
+    "fail": {
+      "exitCode": 1,
+      "stdout": {
+        "text": "\n RUN  v5.1.0 /workspace\n\nstdout | fail.test.mjs > the qualification fixture reports a failed assertion\nQUALIFICATION_FAIL_STDOUT\n\n ❯ fail.test.mjs (1 test | 1 failed) 201ms\n   × the qualification fixture reports a failed assertion 199ms\n\n Test Files  1 failed (1)\n      Tests  1 failed (1)\n   Start at  01:40:46\n   Duration  3.60s (transform 38%, tests 25%, import 25%, worker 13%)\n\n",
+        "bytes": 387
+      },
+      "stderr": {
+        "text": "\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  fail.test.mjs > the qualification fixture reports a failed assertion\nAssertionError: expected 'QUALIFICATION_ACTUAL' to be 'QUALIFICATION_EXPECTED' // Object.is equality\n\nExpected: \"QUALIFICATION_EXPECTED\"\nReceived: \"QUALIFICATION_ACTUAL\"\n\n ❯ fail.test.mjs:5:34\n      3| test(\"the qualification fixture reports a failed assertion\", () => {\n      4|   console.log(\"QUALIFICATION_FAIL_STDOUT\");\n      5|   expect(\"QUALIFICATION_ACTUAL\").toBe(\"QUALIFICATION_EXPECTED\");\n       |                                  ^\n      6| });\n      7|\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n",
+        "bytes": 686
+      }
+    },
+    "witness": {
+      "macReached": true,
+      "vitestReached": false
+    }
+  },
+  "instance": {
+    "id": "28cd0883b8114b5abde7a198468db28f0549e57fa2fe7ce100760662de245e55",
+    "name": "e99abb2f-898c-4639-9124-52f9d6c8b7d9",
+    "status": {
+      "state": "stopped",
+      "updated_at": "2026-11-12T01:40:50.616Z",
+      "exit_code": 0
+    },
+    "image": "registry.cloudflare.com/<account-id>/cloudflare-build/<registry-namespace>/sandbox-runner-vitest-q-g0le2u-base@sha256:0aa279d0ab36b6180f80c66fa0f6ffe224adf184512691bfb9b46aca7bdf3b4f"
+  },
+  "checks": {
+    "unauthenticated404": true,
+    "resultAfterDestroy": true,
+    "sameResultOnStatusAndReplay": true,
+    "activeInstancesAfterDestroy": 0
+  },
+  "cleanup": {
+    "workerAbsent": true,
+    "workerInventoryPages": 2,
+    "applicationAbsent": true,
+    "registryRepositoryAbsent": true,
+    "registryTagsRemoved": [
+      "82c018b23e60",
+      "e65c03583531"
+    ],
+    "localImageTagsRemoved": 7,
+    "localCanaryContainersRemaining": 0,
+    "privateScratchRemoved": true
+  }
+}

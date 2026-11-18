@@ -1,0 +1,8 @@
+node_modules/
+pinned-src/
+daemon.mjs
+.cloudflare/
+.dev.vars*
+.local/
+.docker/
+*.log

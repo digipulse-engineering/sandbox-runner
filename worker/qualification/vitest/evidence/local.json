@@ -1,0 +1,114 @@
+{
+  "scope": "cf dev with native Durable Object Container API",
+  "cfVersion": "1.0.0-beta.29",
+  "verifiedBy": "verify.mjs",
+  "checks": {
+    "unauthenticated404": true,
+    "resultAfterDestroy": true,
+    "sameResultOnStatusAndReplay": true
+  },
+  "diagnosticTcpConnectionEvents": [
+    {
+      "id": "03aa074c-fdf5-48e0-8201-a15b8c603b0a",
+      "destination": "1.1.1.1:443",
+      "event": "connected"
+    },
+    {
+      "id": "58dd2b27-f5a7-4f19-8055-bd64b1116df1",
+      "destination": "1.1.1.1:853",
+      "event": "connect"
+    }
+  ],
+  "localRun": {
+    "id": "9c9dcc17-d062-4c4b-ae0d-3939fb117a99",
+    "status": "succeeded",
+    "cleanup": "destroyed",
+    "phase": "complete",
+    "sourceScope": "image-preseeded-synthetic-git",
+    "fixtureCommit": "d7c1a971fd8b18838c4ebdcd813cf1de06ca4aca",
+    "internetAtStart": false,
+    "nodeVersion": "v24.22.2",
+    "install": {
+      "exitCode": 0,
+      "stdout": {
+        "text": "\nadded 35 packages in 21s\n",
+        "bytes": 26
+      },
+      "stderr": {
+        "text": "",
+        "bytes": 0
+      }
+    },
+    "registrySealed": true,
+    "registryRequests": 35,
+    "vitestVersion": "5.1.0",
+    "pass": {
+      "exitCode": 0,
+      "stdout": {
+        "text": "\n RUN  v5.1.0 /workspace\n\nstdout | offline.test.mjs > direct public IP cannot establish DNS-over-TLS\nQUALIFICATION_DIRECT_IP_TLS_BLOCKED { tcpConnected: true, outcome: 'ECONNRESET' }\n\nstdout | offline.test.mjs\nQUALIFICATION_DIRECT_DOT_BLOCKED { tcpConnected: true, outcome: 'ECONNRESET' }\n\nstdout | offline.test.mjs\nQUALIFICATION_LOOPBACK_OK\n\nstdout | offline.test.mjs\nQUALIFICATION_DNS_BLOCKED\n\nstdout | offline.test.mjs\nQUALIFICATION_REGISTRY_SEALED\n\n ✓ offline.test.mjs (6 tests | 1 skipped) 1013ms\n   ✓ loopback remains available to tests 933ms\n   ✓ a previously allowed registry tarball is denied 1001ms\n   ✓ DNS outside the registry route is blocked 957ms\n   ✓ direct public IP cannot establish HTTPS TLS 600ms\n   ✓ direct public IP cannot establish DNS-over-TLS 957ms\nstdout | pass.test.mjs > the qualification fixture passes\nQUALIFICATION_PASS_STDOUT\n\n ✓ pass.test.mjs (1 test) 418ms\n\n Test Files  2 passed (2)\n      Tests  6 passed | 1 skipped (7)\n   Start at  01:24:09\n   Duration  25.70s (tests 40%, transform 28%, import 23%, worker 9%)\n\n    Isolate  2 workers spawned · ~10.70s startup each (spawn + environment, per file)\n             at least ~10.70s faster with isolate: false — reuses workers across files instead of one per file\n\n",
+        "bytes": 1265
+      },
+      "stderr": {
+        "text": "",
+        "bytes": 0
+      }
+    },
+    "fail": {
+      "exitCode": 1,
+      "stdout": {
+        "text": "\n RUN  v5.1.0 /workspace\n\nstdout | fail.test.mjs > the qualification fixture reports a failed assertion\nQUALIFICATION_FAIL_STDOUT\n\n ❯ fail.test.mjs (1 test | 1 failed) 135ms\n   × the qualification fixture reports a failed assertion 111ms\n\n Test Files  1 failed (1)\n      Tests  1 failed (1)\n   Start at  01:24:51\n   Duration  4.42s (transform 42%, import 25%, tests 23%, worker 10%)\n\n",
+        "bytes": 387
+      },
+      "stderr": {
+        "text": "\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  fail.test.mjs > the qualification fixture reports a failed assertion\nAssertionError: expected 'QUALIFICATION_ACTUAL' to be 'QUALIFICATION_EXPECTED' // Object.is equality\n\nExpected: \"QUALIFICATION_EXPECTED\"\nReceived: \"QUALIFICATION_ACTUAL\"\n\n ❯ fail.test.mjs:5:34\n      3| test(\"the qualification fixture reports a failed assertion\", () => {\n      4|   console.log(\"QUALIFICATION_FAIL_STDOUT\");\n      5|   expect(\"QUALIFICATION_ACTUAL\").toBe(\"QUALIFICATION_EXPECTED\");\n       |                                  ^\n      6| });\n      7|\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n",
+        "bytes": 686
+      }
+    }
+  },
+  "deadlineAdjustedLocalRun": {
+    "id": "244db9bc-4434-4351-b31d-7add46001790",
+    "status": "succeeded",
+    "cleanup": "destroyed",
+    "phase": "complete",
+    "sourceScope": "image-preseeded-synthetic-git",
+    "fixtureCommit": "a8d19de9fe51ac776e61145f15011839974f919c",
+    "internetAtStart": false,
+    "nodeVersion": "v24.22.2",
+    "install": {
+      "exitCode": 0,
+      "stdout": {
+        "text": "\nadded 35 packages in 28s\n",
+        "bytes": 26
+      },
+      "stderr": {
+        "text": "",
+        "bytes": 0
+      }
+    },
+    "registrySealed": true,
+    "registryRequests": 35,
+    "vitestVersion": "5.1.0",
+    "pass": {
+      "exitCode": 0,
+      "stdout": {
+        "text": "\n RUN  v5.1.0 /workspace\n\nstdout | offline.test.mjs > direct public IP cannot establish DNS-over-TLS\nQUALIFICATION_DNS_BLOCKED { defaultResolver: 'ENOTFOUND', publicResolver: 'ENOTFOUND' }\n\nstdout | offline.test.mjs\nQUALIFICATION_DIRECT_IP_TLS_BLOCKED { tcpConnected: true, outcome: 'ECONNRESET' }\n\nstdout | offline.test.mjs\nQUALIFICATION_DIRECT_DOT_BLOCKED { tcpConnected: true, outcome: 'ECONNRESET' }\n\nstdout | offline.test.mjs\nQUALIFICATION_LOOPBACK_OK\n\nstdout | offline.test.mjs\nQUALIFICATION_REGISTRY_SEALED\n\n ✓ offline.test.mjs (6 tests | 1 skipped) 2431ms\n   ✓ loopback remains available to tests 2322ms\n   ✓ a previously allowed registry tarball is denied 2401ms\n   ✓ DNS outside the registry route is blocked 478ms\n   ✓ direct public IP cannot establish HTTPS TLS 799ms\n   ✓ direct public IP cannot establish DNS-over-TLS 801ms\nstdout | pass.test.mjs > the qualification fixture passes\nQUALIFICATION_PASS_STDOUT\n\n ✓ pass.test.mjs (1 test) 116ms\n\n Test Files  2 passed (2)\n      Tests  6 passed | 1 skipped (7)\n   Start at  01:36:20\n   Duration  21.80s (tests 47%, import 21%, transform 13%, worker 12%, environment 7%)\n\n    Isolate  2 workers spawned · ~7.88s startup each (spawn + environment, per file)\n             at least ~7.88s faster with isolate: false — reuses workers across files instead of one per file\n\n",
+        "bytes": 1343
+      },
+      "stderr": {
+        "text": "",
+        "bytes": 0
+      }
+    },
+    "fail": {
+      "exitCode": 1,
+      "stdout": {
+        "text": "\n RUN  v5.1.0 /workspace\n\nstdout | fail.test.mjs > the qualification fixture reports a failed assertion\nQUALIFICATION_FAIL_STDOUT\n\n ❯ fail.test.mjs (1 test | 1 failed) 141ms\n   × the qualification fixture reports a failed assertion 120ms\n\n Test Files  1 failed (1)\n      Tests  1 failed (1)\n   Start at  01:36:53\n   Duration  4.32s (transform 48%, import 26%, tests 14%, worker 11%)\n\n",
+        "bytes": 387
+      },
+      "stderr": {
+        "text": "\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  fail.test.mjs > the qualification fixture reports a failed assertion\nAssertionError: expected 'QUALIFICATION_ACTUAL' to be 'QUALIFICATION_EXPECTED' // Object.is equality\n\nExpected: \"QUALIFICATION_EXPECTED\"\nReceived: \"QUALIFICATION_ACTUAL\"\n\n ❯ fail.test.mjs:5:34\n      3| test(\"the qualification fixture reports a failed assertion\", () => {\n      4|   console.log(\"QUALIFICATION_FAIL_STDOUT\");\n      5|   expect(\"QUALIFICATION_ACTUAL\").toBe(\"QUALIFICATION_EXPECTED\");\n       |                                  ^\n      6| });\n      7|\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n",
+        "bytes": 686
+      }
+    }
+  }
+}
