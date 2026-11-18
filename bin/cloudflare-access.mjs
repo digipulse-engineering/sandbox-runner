@@ -15,13 +15,14 @@ import { validAccessSettings } from "../worker/access-config.mjs";
 // stdio MCP server, automation) present an Access service token, then their runner token as before.
 
 const usage = "Use cloudflare access enable [DIRECTORY] --url https://WORKER.SUBDOMAIN.workers.dev --email ADDRESS " +
-  "[--email ADDRESS ...] [--redirect-uri URI ...] [--service-token-file FILE] [--service-token-ip CIDR ...] [--scope host|mcp] [--dry-run], " +
+  "[--email ADDRESS ...] [--redirect-uri URI ...] [--web-clients-only] [--service-token-file FILE] [--service-token-ip CIDR ...] [--scope host|mcp] [--dry-run], " +
   "cloudflare access status [DIRECTORY] or cloudflare access disable [DIRECTORY].";
 // "host" (the default) puts the whole workers.dev host behind Access, so unauthenticated traffic never reaches the
 // Worker. "mcp" protects only /mcp and leaves the other routes to runner tokens alone; it exists for installations
 // whose clients cannot present a service token yet.
 const scopes = ["host", "mcp"];
-const defaultRedirects = ["https://chatgpt.com/*"];
+// Web clients that call back to their own site. Native clients (Claude Code, Codex) use loopback redirects instead.
+const defaultRedirects = ["https://chatgpt.com/*", "https://claude.ai/*"];
 // Cloudflare recommends a short access token with a grant of one to two weeks for agents: the client refreshes
 // silently and Access re-evaluates its policy on every refresh.
 const grant = { access_token_lifetime: "15m", session_duration: "336h" };
@@ -36,7 +37,7 @@ function accessOptions(args) {
     const parsed = parseArgs({ args, tokens: true, allowPositionals: true, options: {
       url: { type: "string" }, email: { type: "string", multiple: true }, "redirect-uri": { type: "string", multiple: true },
       "dry-run": { type: "boolean" }, scope: { type: "string" }, "service-token-file": { type: "string" },
-      "service-token-ip": { type: "string", multiple: true },
+      "service-token-ip": { type: "string", multiple: true }, "web-clients-only": { type: "boolean" },
     } });
     const [action, directory = ".", ...extra] = parsed.positionals;
     const single = parsed.tokens.filter(token => token.kind === "option" && !["email", "redirect-uri", "service-token-ip"].includes(token.name))
@@ -45,13 +46,13 @@ function accessOptions(args) {
       throw new Error();
     }
     const { url, email, "redirect-uri": redirects, "dry-run": dryRun, scope, "service-token-file": tokenFile,
-      "service-token-ip": ips } = parsed.values;
+      "service-token-ip": ips, "web-clients-only": webOnly } = parsed.values;
     if (action !== "enable" && (url !== undefined || email !== undefined || redirects !== undefined || dryRun !== undefined ||
-        parsed.values.scope !== undefined || tokenFile !== undefined || ips !== undefined)) throw new Error();
+        parsed.values.scope !== undefined || tokenFile !== undefined || ips !== undefined || webOnly !== undefined)) throw new Error();
     if (action === "enable" && (url === undefined || email === undefined || (scope !== undefined && !scopes.includes(scope)) ||
         tokenFile === "")) throw new Error();
     return { action, directory, url, emails: email, redirects: redirects ?? defaultRedirects, dryRun: dryRun === true, scope,
-      serviceTokenFile: tokenFile === undefined ? undefined : resolve(tokenFile), serviceTokenIps: ips };
+      serviceTokenFile: tokenFile === undefined ? undefined : resolve(tokenFile), serviceTokenIps: ips, nativeClients: webOnly !== true };
   } catch {
     throw new CliError("usage_error", usage, exit.usage);
   }
@@ -177,7 +178,7 @@ async function allServiceTokens(read) {
   }
 }
 
-function applicationBody(worker, domain, emails, redirects, tokenId, ips) {
+function applicationBody(worker, domain, emails, redirects, tokenId, ips, nativeClients = true) {
   return {
     type: "self_hosted",
     name: `Sandbox Runner MCP (${worker})`,
@@ -195,7 +196,10 @@ function applicationBody(worker, domain, emails, redirects, tokenId, ips) {
     ],
     oauth_configuration: {
       enabled: true,
-      dynamic_client_registration: { enabled: true, allowed_uris: redirects, allow_any_on_localhost: false, allow_any_on_loopback: false },
+      // Native clients such as Claude Code and Codex register a loopback redirect on a port chosen at sign-in
+      // (RFC 8252, section 7.3). The member policy still decides who can sign in.
+      dynamic_client_registration: { enabled: true, allowed_uris: redirects,
+        allow_any_on_localhost: nativeClients, allow_any_on_loopback: nativeClients },
       grant,
     },
   };
@@ -410,7 +414,7 @@ export async function cloudflareAccess(args, env) {
         "--service-token-ip restricts the installation's service token: pass --service-token-file to create one.");
     }
     const planned = applicationBody(target.worker, domain, options.emails, options.redirects,
-      createToken ? "00000000-0000-0000-0000-000000000000" : tokenId, ips);
+      createToken ? "00000000-0000-0000-0000-000000000000" : tokenId, ips, options.nativeClients);
     const mcpUrl = `https://${hostname}/mcp`;
     if (options.dryRun) {
       return { status: "dry_run", action: current ? "update" : "create", ...(current ? { appId: current.id } : {}), teamDomain, mcpUrl,
@@ -455,7 +459,7 @@ export async function cloudflareAccess(args, env) {
       await file.close();
       tokenId = created.id;
     }
-    const fresh = applicationBody(target.worker, domain, options.emails, options.redirects, tokenId, ips);
+    const fresh = applicationBody(target.worker, domain, options.emails, options.redirects, tokenId, ips, options.nativeClients);
     const body = current ? mergedBody(current, fresh, target.worker) : fresh;
     let saved;
     try {

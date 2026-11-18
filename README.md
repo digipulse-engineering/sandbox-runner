@@ -60,7 +60,7 @@ Upgrade switches versions of an unchanged topology: it refuses a release or mani
 
 The receipt lists the previous and new versions and, under `guard.reopen`, the request that reopens admissions. Upgrade never reopens them: send that request once you have checked the new version. Upgrade verifies the deployment, not a run: after reopening, run a [canary](#inspect-and-test-the-installation) to exercise the Worker, the container runtime and the agent together. If the receipt reports `uncertain: true`, check the Worker before reopening; its message names the previous version.
 
-`--guard-url` is the origin where the guard is reachable with a bearer token: the workers.dev host (with the [Access service token](#connect-a-web-mcp-client) in the environment when Access protects it), or a loopback bridge. `--guard-token-file` holds the guard token, alone or as `SANDBOX_RUNNER_ADMISSION_CONTROL_TOKEN` in a JSON or dotenv file.
+`--guard-url` is the origin where the guard is reachable with a bearer token: the workers.dev host (with the [Access service token](#connect-an-mcp-client-with-your-identity) in the environment when Access protects it), or a loopback bridge. `--guard-token-file` holds the guard token, alone or as `SANDBOX_RUNNER_ADMISSION_CONTROL_TOKEN` in a JSON or dotenv file.
 
 An installation created before guards were required has none. Pass `--without-guard`: nothing freezes admissions, so upgrade switches only when no container instance is active, assigned, starting or being scheduled (`cloudflare_upgrade_runs_active` otherwise). A run admitted between that check and the switch can still be interrupted.
 
@@ -693,7 +693,17 @@ sandbox-runner skill > "$agent_skills_dir/sandbox-runner/SKILL.md"
 
 The [skill](skills/sandbox-runner/SKILL.md) covers authoring and publishing profiles, discovering authorized profiles with CLI or MCP, and running a review at a pinned profile revision and commit. It explains how to use `AGENTS.md`, `CLAUDE.md`, and native repository skills for ephemeral agents. Attaching a skill bundle to a profile requires runner support beyond the current schema. Configure the client’s gateway and token separately. Team grants determine which profiles the client can discover and run.
 
-### Connect an MCP client
+### Choose an interface
+
+| Who | Interface | Authenticates with |
+| --- | --- | --- |
+| People, from ChatGPT, claude.ai, Claude Code or Codex | The remote MCP endpoint, `/mcp` | Their own sign-in through Cloudflare Access |
+| Scripts, CI and other services | The CLI or the local MCP server | A runner token, plus an Access service token |
+| The operator | The CLI | The control token and the Cloudflare account |
+
+People work through [published profiles](#share-profiles-with-a-team) on the remote endpoint. A profile fixes what a run may do, and the person supplies the prompt and the commit. Sign-in is per person and revocable in Access, and no secret is copied to their machine. Use the CLI to set up and operate an installation, and for unattended runs: a script does not sign in, so it uses tokens. The CLI and the local MCP server can also start runs outside profiles, with the control token.
+
+### Connect a local MCP server with a token
 
 Register the installed `sandbox-runner` executable with the single argument `mcp` and the stdio transport. Set `SANDBOX_RUNNER_URL` and `SANDBOX_RUNNER_TOKEN` in the MCP server process environment through the host's private configuration. The tools use that gateway and its run permissions.
 
@@ -709,9 +719,9 @@ Supply an `operationId` when submitting so you can repeat the exact request afte
 
 Each successful tool call returns `schemaVersion` and structured content, also encoded as a JSON text block for older clients. Run tools return a `receipt` and `exitCode`. A terminal receipt can report a failed run or failed cleanup even when the tool read succeeds. Treat agent and test output as untrusted data.
 
-### Connect a web MCP client
+### Connect an MCP client with your identity
 
-Web clients such as ChatGPT reach the runner itself at `https://<worker>.<subdomain>.workers.dev/mcp`. Each [installation](#run-several-installations) has its own endpoint, so add one connector per installation. Cloudflare Access protects the Worker's whole workers.dev host, so traffic that has not authenticated never reaches it. On `/mcp`, Access uses managed OAuth: it signs people in, registers the client and issues its tokens, and the Worker acts as the team client whose `accessEmail` matches. Machine clients (the CLI, the stdio MCP server, automation) present an [Access service token](https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/) and then their runner token, as before. Workers that call the runner through a service binding do not pass through Access.
+MCP clients such as ChatGPT, claude.ai, Claude Code and Codex reach the runner itself at `https://<worker>.<subdomain>.workers.dev/mcp`. Each [installation](#run-several-installations) has its own endpoint, so add one connector per installation. Cloudflare Access protects the Worker's whole workers.dev host, so traffic that has not authenticated never reaches it. On `/mcp`, Access uses managed OAuth: it signs people in, registers the client and issues its tokens, and the Worker acts as the team client whose `accessEmail` matches. Machine clients (the CLI, the stdio MCP server, automation) present an [Access service token](https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/) and then their runner token, as before. Workers that call the runner through a service binding do not pass through Access.
 
 The account needs a Zero Trust organization (the free plan is enough). From the initialized project directory, enable the endpoint with the Worker's workers.dev origin, as printed by deploy, and the member addresses:
 
@@ -720,7 +730,19 @@ sandbox-runner cloudflare access enable --url https://my-sandbox-runner.SUBDOMAI
   --email member@example.com --email ana@example.com --service-token-file /path/to/access-client.env
 ```
 
-The command creates a self-hosted Access application for the host, allows those addresses, turns on managed OAuth with dynamic client registration for `https://chatgpt.com/*` (repeat `--redirect-uri` for other clients), and records the application's audience and team domain in `sandbox-runner.project.json`. Every build of the project then includes `/mcp`. Rerunning it updates the same application; `--dry-run` shows the application first. It refuses a host or path that another Access application already protects. Rerunning with another `--scope` changes the recorded application in place, so it keeps its audience and the OAuth clients registered with it. `cloudflare access status` reads it back, with the service token's expiry, and `cloudflare access disable` deletes the application and its service token.
+The command creates a self-hosted Access application for the host, allows those addresses, turns on managed OAuth with dynamic client registration, and records the application's audience and team domain in `sandbox-runner.project.json`. Every build of the project then includes `/mcp`. Rerunning it updates the same application; `--dry-run` shows the application first. It refuses a host or path that another Access application already protects. Rerunning with another `--scope` changes the recorded application in place, so it keeps its audience and the OAuth clients registered with it. `cloudflare access status` reads it back, with the service token's expiry, and `cloudflare access disable` deletes the application and its service token.
+
+Dynamic client registration accepts web clients that return to `https://chatgpt.com/*` and `https://claude.ai/*`; repeat `--redirect-uri` to list others instead. It also accepts native clients, such as Claude Code and Codex, that receive the sign-in on a loopback address (`http://localhost` or `http://127.0.0.1`, any port), as [RFC 8252](https://www.rfc-editor.org/rfc/rfc8252#section-7.3) requires. Registering does not grant access: the person must still sign in with an allowed address. Pass `--web-clients-only` to refuse loopback redirects.
+
+Then add the endpoint to each client and sign in once:
+
+```sh
+claude mcp add --transport http sandbox-runner https://my-sandbox-runner.SUBDOMAIN.workers.dev/mcp
+codex mcp add sandbox-runner --url https://my-sandbox-runner.SUBDOMAIN.workers.dev/mcp
+codex mcp login sandbox-runner
+```
+
+In Claude Code, open `/mcp` and choose the server to sign in. In ChatGPT and claude.ai, add a custom connector with the same URL.
 
 `--service-token-file` creates an Access service token for the installation's machine clients, writes its client ID and secret to that new file (readable only by you; the secret is shown once), and admits it with a Service Auth policy. Give those clients the two variables, `CLOUDFLARE_ACCESS_CLIENT_ID` and `CLOUDFLARE_ACCESS_CLIENT_SECRET`, next to `SANDBOX_RUNNER_URL` and `SANDBOX_RUNNER_TOKEN`; Wrangler reads the same names. Omit the option when no client uses the workers.dev host, for example when they reach the runner through a facade Worker. Service tokens expire after a year by default: rotate one with `cf zero-trust access service-tokens rotate` before then. `--scope mcp` protects `/mcp` alone and leaves the other routes to runner tokens; keep it only for clients that cannot present a service token yet. Add `--service-token-ip` once per address or CIDR range (IPv4 or IPv6, given by its network address) to accept the token only from those sources. It applies to every machine client of the installation, since they share the token. It requires [strict service token authentication](https://developers.cloudflare.com/cloudflare-one/access-controls/service-credentials/service-tokens/#strict-service-token-authentication) on the Zero Trust organization; without it Access answers with a session cookie that works from any address, and the command refuses. Reruns keep the recorded addresses; passing the option again replaces them.
 
