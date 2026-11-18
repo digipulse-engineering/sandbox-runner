@@ -1,6 +1,53 @@
-# Sandbox Runner CLI
+# Sandbox Runner
 
-Sandbox Runner submits a prompt to Claude Code, Codex or OpenCode, or runs a repository's Vitest suite, in a Cloudflare container. A Worker authenticates requests, starts the run and stores its result outside the container. The CLI uses a separate control token. For agent runs, the Worker adds provider credentials on the allowed outbound routes.
+Run coding agents, reviews and test suites in disposable Cloudflare Containers, on your own Cloudflare account, without handing the agent your credentials.
+
+<!-- Maintainer: the two paragraphs below are a draft of the "why". Rewrite them in your own words. -->
+
+A coding agent needs real access to be useful: a model provider account, your repository, sometimes your issue tracker or other tools. It also reads content nobody has reviewed, and a prompt injection in that content can turn the agent against you. Running the agent on a laptop or a CI runner puts those credentials within its reach.
+
+Sandbox Runner keeps them out of reach. Each run gets one container with no internet access. A Worker holds the credentials and adds them to the few outbound requests it allows. Results are stored outside the container, which is destroyed when the run ends.
+
+```mermaid
+flowchart LR
+  caller["CLI or MCP client"] -->|"runner token, Cloudflare Access"| worker["Worker and Durable Objects<br/>credentials, policies, results"]
+  worker -->|"starts one per run"| container["Container<br/>agent or tests, no internet"]
+  container -->|"intercepted requests only"| worker
+  worker -->|"adds credentials on allowed routes"| upstream["Model provider, GitHub, MCP servers"]
+```
+
+What it does:
+
+- Runs Claude Code, Codex and OpenCode on a commit of a private GitHub repository, and can publish the result as a branch.
+- Runs an independent review of a commit with a different agent, with read-only connector access.
+- Runs a repository's Vitest suite or a fixed test command, with the network closed during the tests.
+- Lets agents use MCP connectors through rules that pin the tools and arguments each run may use.
+- Shares saved run profiles with a team, each client limited to the profiles you grant.
+- Serves a CLI, a local MCP server, and a remote MCP endpoint behind Cloudflare Access for web clients such as ChatGPT and Claude.
+
+Read the [security model](docs/security.md) for what is protected and what is not.
+
+## Quick start
+
+You need Node.js 24 or later, Bun, Git, Docker and a Cloudflare account on the Workers Paid plan.
+
+```sh
+npm install --global sandbox-runner-cli
+
+# Deploy the Worker and both container applications to your account.
+sandbox-runner cloudflare setup my-sandbox-runner --account <id> --worker my-sandbox-runner \
+  --secrets-file /path/to/sandbox-runner.secrets.env
+
+# Connect a model provider. The credential is stored as a Worker secret.
+sandbox-runner auth claude --mode subscription --account <id> --worker my-sandbox-runner
+
+# Point the CLI at the Worker, then start a run.
+export SANDBOX_RUNNER_URL=https://my-sandbox-runner.<subdomain>.workers.dev
+export SANDBOX_RUNNER_TOKEN=<control token>
+sandbox-runner claude start 'Summarize what a Durable Object is.'
+```
+
+The sections below explain each step: the secrets file that setup needs, private repositories, connectors, reviews, tests and team profiles.
 
 ## Set up the Worker
 
