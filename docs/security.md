@@ -71,6 +71,7 @@ The container never holds a credential that can write to GitHub.
 
 - Each run, and each authentication attempt of a run, gets its own Durable Object and its own container.
 - Results are stored outside the container.
+- The container's filesystem is never saved or restored. The Worker refuses the agent runtime's workspace snapshots, so the checkout and the agent's files disappear with the container.
 - At the end of a run, the Worker destroys the container and verifies that it is gone. It retries on failure and records `cleanup: "failed"` if it cannot confirm.
 - Agent CLIs, test commands and the checkout run as an unprivileged user (uid 10001). The publication snapshot and export steps run as root, after every agent process has exited.
 
@@ -101,7 +102,6 @@ These limits are part of the design or are not solved yet. Plan for them.
 - **No spending limit is enforced.** Set limits with your model provider. No agent deadline applies unless you configure one.
 - **Run output is stored as the agent produced it.** It can contain anything the agent read, and nothing redacts it. Treat it as untrusted data when you display it or pass it to another agent.
 - **Run data is kept until you remove the installation.** Results, events and the run index stay in Durable Object storage. Nothing expires them.
-- **A delayed cleanup may leave a workspace snapshot.** The agent runtime can save the container's filesystem when a container stops idle. A normal run destroys its container first. This path has not been ruled out when cleanup is delayed or fails.
 - **Workers logs are off by default.** The only audit records are the stored runs and the log of refused team requests.
 - **Claude Code and Codex are installed in the image by version, without an integrity hash.** Their dependencies are resolved when the image is built.
 - **The container's supervising daemon runs as root** inside the container, as do the publication snapshot and export steps. The agent, the checkout and the test processes drop to the unprivileged user.
