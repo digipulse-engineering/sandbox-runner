@@ -1,0 +1,55 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The release workflow runs the same suites before it stages a package.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  # Cancel superseded pull request runs only; every push to main keeps its own result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      # worker/prepare-sdk.sh bundles the pinned ContainerHarness runtime and the container daemon with Bun.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.1
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: worker/checkout/go.mod
+          cache: false
+      - name: Install the CLI
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Install the Worker
+        working-directory: worker
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Rebuild the pinned ContainerHarness and the container daemon
+        working-directory: worker
+        run: bash prepare-sdk.sh
+      - name: CLI tests
+        run: npm test
+      - name: Worker tests
+        working-directory: worker
+        run: npm test
+      - name: Vitest qualification helper tests
+        working-directory: worker/qualification/vitest
+        run: node --test registry.test.mjs witness.test.mjs
+      - name: Checkout helper tests (Go)
+        working-directory: worker/checkout
+        run: go test ./...

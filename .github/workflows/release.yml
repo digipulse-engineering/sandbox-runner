@@ -1,0 +1,55 @@
+name: release
+
+# Pushing a v* tag runs every test suite, then stages the package on npm.
+# A staged version stays private until a maintainer approves it with 2FA.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  stage:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Restrict this environment to v* tags. The npm trusted publisher names it.
+    environment: npm
+    permissions:
+      contents: read
+      # npm trusted publishing exchanges this OIDC token; the repository stores no npm token.
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Fetch main to check that the tagged commit belongs to it.
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # Node 24.22.0 bundles npm 11.19.1. Staged publishing needs npm 11.15.0 or later.
+          node-version: 24.22.0
+          registry-url: https://registry.npmjs.org
+      - name: Check that the tagged commit is on main
+        run: |
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME points to a commit that is not on main."
+            exit 1
+          fi
+      - name: Check the tag against the version, the lockfile and the changelog
+        id: release
+        run: node scripts/release-check.mjs "$GITHUB_REF_NAME"
+      - name: Stage the package on npm
+        env:
+          DIST_TAG: ${{ steps.release.outputs.dist-tag }}
+        run: |
+          test -n "$DIST_TAG"
+          npm stage publish --provenance --tag "$DIST_TAG"

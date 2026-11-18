@@ -1,0 +1,73 @@
+{
+  "scope": "first hosted native Vitest canary",
+  "candidate": "7056fb7",
+  "outcome": "vitest probe timers expired before network callbacks",
+  "version": "7103b214-b399-4723-92cf-62590854558f",
+  "application": "<application-id>",
+  "image": {
+    "repository": "cloudflare-build/<registry-namespace>/sandbox-runner-vitest-q-g0le2u-base",
+    "tag": "82c018b23e60",
+    "digest": "sha256:a7a7c840a1706dc462f64abf0d91535a3df6a9838dce40b257a89c10a1c0eac5"
+  },
+  "run": {
+    "id": "c4043b0f-f0b7-4832-b4f4-3bef618a1f1b",
+    "status": "failed",
+    "cleanup": "destroyed",
+    "phase": "vitest",
+    "sourceScope": "image-preseeded-synthetic-git",
+    "fixtureCommit": "d7c1a971fd8b18838c4ebdcd813cf1de06ca4aca",
+    "internetAtStart": false,
+    "nodeVersion": "v24.22.2",
+    "install": {
+      "exitCode": 0,
+      "stdout": {
+        "text": "\nadded 35 packages in 2s\n",
+        "bytes": 25
+      },
+      "stderr": {
+        "text": "",
+        "bytes": 0
+      }
+    },
+    "registrySealed": true,
+    "registryRequests": 35,
+    "vitestVersion": "5.1.0",
+    "pass": {
+      "exitCode": 1,
+      "stdout": {
+        "text": "\n RUN  v5.1.0 /workspace\n\nstdout | offline.test.mjs > direct public IP cannot establish DNS-over-TLS\nQUALIFICATION_DIRECT_IP_TLS_BLOCKED { tcpConnected: true, outcome: 'ECONNRESET' }\n\nstdout | offline.test.mjs\nQUALIFICATION_LOOPBACK_OK\n\nstdout | offline.test.mjs\nQUALIFICATION_REGISTRY_SEALED\n\nstdout | offline.test.mjs\nQUALIFICATION_DIRECT_DOT_BLOCKED { tcpConnected: false, outcome: 'timeout' }\n\nstdout | offline.test.mjs > an HTTPS request cannot reach the external witness\nQUALIFICATION_HTTPS_WITNESS_BLOCKED\n\nstdout | offline.test.mjs > an HTTPS request cannot reach the external witness\nQUALIFICATION_DNS_BLOCKED\n\n ❯ offline.test.mjs (6 tests | 2 failed) 13387ms\n   ✓ loopback remains available to tests 57ms\n   ✓ a previously allowed registry tarball is denied 59ms\n   × DNS outside the registry route is blocked 9077ms\n   ✓ direct public IP cannot establish HTTPS TLS 30ms\n   × direct public IP cannot establish DNS-over-TLS 6031ms\n   ✓ an HTTPS request cannot reach the external witness 4306ms\nstdout | pass.test.mjs > the qualification fixture passes\nQUALIFICATION_PASS_STDOUT\n\n ✓ pass.test.mjs (1 test) 198ms\n\n Test Files  1 failed | 1 passed (2)\n      Tests  2 failed | 5 passed (7)\n   Start at  01:29:58\n   Duration  18.37s (tests 94%, import 4%, worker 1%, transform 1%)\n\n    Isolate  2 workers spawned · ~1.79s startup each (spawn + environment, per file)\n             at least ~1.79s faster with isolate: false — reuses workers across files instead of one per file\n\n",
+        "bytes": 1499
+      },
+      "stderr": {
+        "text": "\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  offline.test.mjs > DNS outside the registry route is blocked\nError: Test timed out in 9000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n ❯ offline.test.mjs:36:6\n     34| }, 2 * probeTimeout);\n     35|\n     36| test.concurrent(\"DNS outside the registry route is blocked\", async () …\n       |      ^\n     37|   const resolver = new Resolver({ timeout: probeTimeout, tries: 1 });\n     38|   await expect(resolver.resolve4(\"example.com\")).rejects.toThrow(dnsBl…\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯\n\n FAIL  offline.test.mjs > direct public IP cannot establish DNS-over-TLS\nError: Test timed out in 6000ms.\nIf this is a long-running test, pass a timeout value as the last argument or configure it globally with \"testTimeout\".\n ❯ offline.test.mjs:66:6\n     64| }, 2 * probeTimeout);\n     65|\n     66| test.concurrent(\"direct public IP cannot establish DNS-over-TLS\", asyn…\n       |      ^\n     67|   const result = await tlsProbe(853, \"cloudflare-dns.com\");\n     68|   expect(tcpBlocked).toContain(result.outcome);\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯\n\n",
+        "bytes": 1292
+      }
+    },
+    "fail": {
+      "exitCode": 1,
+      "stdout": {
+        "text": "\n RUN  v5.1.0 /workspace\n\nstdout | fail.test.mjs > the qualification fixture reports a failed assertion\nQUALIFICATION_FAIL_STDOUT\n\n ❯ fail.test.mjs (1 test | 1 failed) 296ms\n   × the qualification fixture reports a failed assertion 200ms\n\n Test Files  1 failed (1)\n      Tests  1 failed (1)\n   Start at  01:30:29\n   Duration  4.70s (transform 34%, tests 33%, import 22%, worker 11%)\n\n",
+        "bytes": 387
+      },
+      "stderr": {
+        "text": "\n⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯\n\n FAIL  fail.test.mjs > the qualification fixture reports a failed assertion\nAssertionError: expected 'QUALIFICATION_ACTUAL' to be 'QUALIFICATION_EXPECTED' // Object.is equality\n\nExpected: \"QUALIFICATION_EXPECTED\"\nReceived: \"QUALIFICATION_ACTUAL\"\n\n ❯ fail.test.mjs:5:34\n      3| test(\"the qualification fixture reports a failed assertion\", () => {\n      4|   console.log(\"QUALIFICATION_FAIL_STDOUT\");\n      5|   expect(\"QUALIFICATION_ACTUAL\").toBe(\"QUALIFICATION_EXPECTED\");\n       |                                  ^\n      6| });\n      7|\n\n⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯\n\n",
+        "bytes": 686
+      }
+    },
+    "witness": {
+      "macReached": true,
+      "vitestReached": false
+    }
+  },
+  "instance": {
+    "id": "3be1db7283e2c48de101e66a3700544dc5b1080a042987b194558bec59d395b2",
+    "name": "c4043b0f-f0b7-4832-b4f4-3bef618a1f1b",
+    "status": {
+      "state": "stopped",
+      "updated_at": "2026-11-12T01:30:34.509Z",
+      "exit_code": 0
+    },
+    "image": "registry.cloudflare.com/<account-id>/cloudflare-build/<registry-namespace>/sandbox-runner-vitest-q-g0le2u-base@sha256:a7a7c840a1706dc462f64abf0d91535a3df6a9838dce40b257a89c10a1c0eac5"
+  },
+  "activeInstancesAfterDestroy": 0
+}
