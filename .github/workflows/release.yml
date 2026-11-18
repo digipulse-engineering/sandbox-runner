@@ -15,18 +15,20 @@ concurrency:
 
 jobs:
   test:
-    uses: ./.github/workflows/test.yml
+    # A same-repository reusable workflow is read from the tagged commit, not from the runner's
+    # filesystem. actionlint does not accept the newer "$/" form yet.
+    uses: ./.github/workflows/test.yml # zizmor: ignore[self-repository]
 
   stage:
+    name: Stage on npm
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Restrict this environment to v* tags. The npm trusted publisher names it.
     environment: npm
     permissions:
-      contents: read
-      # npm trusted publishing exchanges this OIDC token; the repository stores no npm token.
-      id-token: write
+      contents: read # Check out the tagged commit.
+      id-token: write # npm trusted publishing exchanges this OIDC token; the repository stores no npm token.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,6 +40,8 @@ jobs:
           # Node 24.22.0 bundles npm 11.19.1. Staged publishing needs npm 11.15.0 or later.
           node-version: 24.22.0
           registry-url: https://registry.npmjs.org
+          # A release must not restore a cache that another workflow could have written.
+          package-manager-cache: false
       - name: Check that the tagged commit is on main
         run: |
           if ! git merge-base --is-ancestor HEAD origin/main; then

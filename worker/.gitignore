@@ -6,3 +6,4 @@ daemon.mjs
 .local/
 .docker/
 *.log
+checkout/sandbox-runner-checkout
