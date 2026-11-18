@@ -99,8 +99,19 @@ test("enable creates a path-scoped Access application with managed OAuth and rec
   assert.deepEqual(body.policies[0].include, [{ email: { email: "member@example.com" } }, { email: { email: "ana@example.com" } }]);
   assert.equal(body.oauth_configuration.enabled, true);
   assert.deepEqual(body.oauth_configuration.dynamic_client_registration,
-    { enabled: true, allowed_uris: ["https://chatgpt.com/*"], allow_any_on_localhost: false, allow_any_on_loopback: false });
+    { enabled: true, allowed_uris: ["https://chatgpt.com/*", "https://claude.ai/*"], allow_any_on_localhost: true, allow_any_on_loopback: true });
   assert.deepEqual((await project.manifest()).access, { appId, aud, teamDomain: "https://team.cloudflareaccess.com", mcpUrl: `${url}/mcp`, scope: "mcp" });
+});
+
+test("--web-clients-only refuses loopback redirects for native clients", async t => {
+  const project = await fixture(t);
+  const { status } = project.run(["enable", project.directory, "--url", url, "--email", "member@example.com", "--web-clients-only"]);
+  assert.equal(status, 0);
+  const create = (await project.calls()).find(args => args[3] === "create");
+  const registration = JSON.parse(create[create.indexOf("--body") + 1]).oauth_configuration.dynamic_client_registration;
+  assert.equal(registration.allow_any_on_localhost, false);
+  assert.equal(registration.allow_any_on_loopback, false);
+  assert.equal(project.run(["status", project.directory, "--web-clients-only"]).status, 2);
 });
 
 test("the recorded settings reach the Worker build", async t => {
