@@ -4,7 +4,7 @@ Sandbox Runner holds provider credentials on a Cloudflare Worker and runs untrus
 
 ## Report a vulnerability
 
-Report it privately through the repository's "Report a vulnerability" button (GitHub private vulnerability reporting). Do not open a public issue or pull request.
+Report it privately through GitHub private vulnerability reporting: open https://github.com/digipulse-engineering/sandbox-runner/security/advisories/new, or use the "Report a vulnerability" button on the repository's Security tab. Do not open a public issue or pull request.
 
 Include the affected version or commit, the configuration involved, the steps to reproduce and the impact you observed. Leave out real credentials: describe them instead.
 

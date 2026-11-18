@@ -2194,7 +2194,9 @@ async function manageAdmissionGuard(request: Request, env: WorkerEnv, ctx: Execu
     const text = await readRequestText(request);
     let action: ReturnType<typeof parseGuardAction>;
     try {
-      if (text !== undefined && !hasDuplicateJsonKeys(text)) action = parseGuardAction(JSON.parse(text), validAdmissionGeneration);
+      // Parse first: hasDuplicateJsonKeys scans in linear time only once the text is known to be valid JSON.
+      const value = text === undefined ? undefined : JSON.parse(text);
+      if (text !== undefined && !hasDuplicateJsonKeys(text)) action = parseGuardAction(value, validAdmissionGeneration);
     } catch { /* Reject malformed JSON below. */ }
     if (!action) return json({ error: "invalid_admission_guard_request" }, 400);
     using state = await index.updateAdmissionGuard(action);

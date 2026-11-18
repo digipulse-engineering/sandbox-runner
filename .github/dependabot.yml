@@ -1,0 +1,49 @@
+version: 2
+
+# Version updates wait out a cooldown so that a compromised release is more likely to be caught
+# and withdrawn before a pull request proposes it. Security updates are not delayed.
+# Not covered here: the Bun release in .github/workflows/test.yml, the Agents SDK commit in
+# worker/prepare-sdk.sh (npm run check:sdk) and the agent CLIs installed in worker/Dockerfile.
+updates:
+  - package-ecosystem: npm
+    directories: ["/", "/worker"]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: gomod
+    directory: /worker/checkout
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    groups:
+      go-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    # The Vitest qualification image uses the same pinned Node base. Its fixture project stays frozen.
+    directories: ["/worker", "/worker/vitest", "/worker/qualification/vitest"]
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      base-images:
+        patterns: ["*"]

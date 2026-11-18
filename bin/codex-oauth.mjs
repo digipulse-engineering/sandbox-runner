@@ -286,7 +286,7 @@ async function exchangeCode(callback, verifier, nonce, expectedSubject, request)
   try {
     const access = decodeJwt(grant.access_token);
     const audiences = Array.isArray(access.aud) ? access.aud : [access.aud];
-    if (access.iss !== issuer || !audiences.includes(resource) || access.client_id !== callback.clientId ||
+    if (access.iss !== issuer || !audiences.some(audience => audience === resource) || access.client_id !== callback.clientId ||
         !Number.isSafeInteger(access.exp) || access.exp <= Date.now() / 1000 || !hasPlanScopes(access.scope)) {
       throw new CodexAuthError("codex_auth_plan_required");
     }

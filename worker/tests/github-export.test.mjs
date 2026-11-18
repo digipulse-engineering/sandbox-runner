@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import { exportGithubWorkspace, parseWorkspaceExport } from "../github-export.ts";
+import { exportGithubWorkspace, parseWorkspaceExport, safePublicationPath } from "../github-export.ts";
 
 const baseSha = "a".repeat(40);
 const baseTreeSha = "b".repeat(40);
@@ -99,4 +99,21 @@ test("never opens native exec after publication authority closes", async () => {
   await assert.rejects(exportGithubWorkspace({ exec() { assert.fail("unauthorized native capture"); } },
     baseSha, encode().length, AbortSignal.timeout(60_000), async () => false),
   error => error.code === "github_publication_authority_closed");
+});
+
+test("publication paths treat trailing dots and spaces as Windows and Git hosts do, in linear time", () => {
+  // The previous implementation trimmed with /[. ]+$/u. Keep its decisions.
+  const previous = path => typeof path === "string" && path.isWellFormed() && path.split("/").every(part => {
+    const alias = part.normalize("NFKC").toLowerCase().replace(/[. ]+$/u, "");
+    return !!alias && alias !== ".git" && !/^git~[0-9]+$/u.test(alias) &&
+      !/[\\:\p{Cc}\p{Cf}]/u.test(part) && !/[/\\:\p{Cc}\p{Cf}]/u.test(alias);
+  });
+  for (const path of ["src/a.ts", ".git", ".git.", ".git . .", ".GIT ", "dir/.Git./x", "git~1", "git~1. .", "GIT~12 ",
+    "a. . .x", "...", " . ", "", "a/", "a//b", "trailing. ", "name.\u3000", "ﾟ.git", "a\u200b.", "a:b", "c\\d"]) {
+    assert.equal(safePublicationPath(path), previous(path), JSON.stringify(path));
+  }
+  assert.equal(safePublicationPath(".git" + ". ".repeat(4)), false);
+  const started = performance.now();
+  assert.equal(safePublicationPath("a" + ". ".repeat(200_000) + "x"), true);
+  assert.ok(performance.now() - started < 1_000, "a long run of dots and spaces is checked in linear time");
 });

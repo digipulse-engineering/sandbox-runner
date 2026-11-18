@@ -44,10 +44,17 @@ function invalid(): never {
   throw new GithubWorkspaceError("github_publication_export_failed");
 }
 
+// Windows and some Git hosts ignore trailing dots and spaces in a name. Trim them in linear time.
+function withoutTrailingDotsAndSpaces(text: string): string {
+  let end = text.length;
+  while (end > 0 && (text[end - 1] === "." || text[end - 1] === " ")) end--;
+  return text.slice(0, end);
+}
+
 export function safePublicationPath(path: unknown): path is string {
   if (typeof path !== "string" || !path.isWellFormed()) return false;
   return path.split("/").every(part => {
-    const alias = part.normalize("NFKC").toLowerCase().replace(/[. ]+$/u, "");
+    const alias = withoutTrailingDotsAndSpaces(part.normalize("NFKC").toLowerCase());
     return !!alias && alias !== ".git" && !/^git~[0-9]+$/u.test(alias) &&
       !/[\\:\p{Cc}\p{Cf}]/u.test(part) && !/[/\\:\p{Cc}\p{Cf}]/u.test(alias);
   });
