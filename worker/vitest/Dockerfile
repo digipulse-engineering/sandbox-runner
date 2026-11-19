@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOPROXY=off \
     go build -trimpath -buildvcs=false -ldflags '-buildid=' -o /sandbox-runner-command ./command/command.go
 
-FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
+FROM node:24-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
 RUN apt-get update \
     && apt-get install --no-install-recommends -y git=1:2.39.5-0+deb12u3 ca-certificates \
     && rm -rf /var/lib/apt/lists/* \

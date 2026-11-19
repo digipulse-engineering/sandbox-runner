@@ -9,14 +9,14 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
     CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOPROXY=off \
     go build -trimpath -buildvcs=false -ldflags '-buildid=' -o /sandbox-runner-checkout .
 
-FROM --platform=$BUILDPLATFORM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS opencode-build
+FROM --platform=$BUILDPLATFORM node:24-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS opencode-build
 WORKDIR /tmp/opencode
 RUN npm pack --ignore-scripts --registry=https://registry.npmjs.org @opencode/cli-linux-x64@2.2.7 \
     && echo "c24fc33c7c6be266a25be166429f33b685e5a3fbc2e6ab261081ec2cd68d2d92f689a2187e1caa1517ba091b02571cbe89bd2c7cad3b5f621ea45c3b6522aa35  opencode-cli-linux-x64-2.2.7.tgz" | sha512sum -c - \
     && tar -xOzf opencode-cli-linux-x64-2.2.7.tgz package/bin/opencode > /opencode \
     && echo "589253d36810f21217edd51545cd435b328cdc3cf4f451fbe0cce6f88afcf5e1  /opencode" | sha256sum -c -
 
-FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
+FROM node:24-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
 RUN npm install --global --no-fund --no-audit @anthropic-ai/claude-code@2.1.289 \
     && claude --version \
     && npm cache clean --force
