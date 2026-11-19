@@ -4,14 +4,16 @@ Run Claude Code, Codex and OpenCode in disposable sandboxes on your own Cloudfla
 
 Start a run from a terminal, from Claude Code or Codex, or from ChatGPT and Claude. The agent works on a commit of your repository in its own container, and you get a report or a new branch back. Your machine does not need to stay on.
 
+A sandbox, here, is a disposable Linux machine created for a single run: a Cloudflare Container, which [runs in its own virtual machine](https://developers.cloudflare.com/containers/architecture/). Inside it the agent can do anything it needs (install packages, run code, edit files), because nothing of yours is exposed: not your computer, not your network, not your credentials. When the run ends, the container is destroyed with everything in it.
+
+That is the current recommendation for running agents. A coding agent reads content nobody has reviewed, and a prompt injection in that content can make it run code you did not intend ([OWASP Top 10 for Agentic Applications](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/), ASI01 and ASI05). The answer is containment rather than trust: one isolated machine per agent, credentials held by a proxy outside it, and outbound traffic denied by default ([Anthropic's agent containment guidance](https://support.claude.com/en/articles/17316105)). Run on a laptop or a shared CI runner, the same agent has your files, your network and often your keys within reach.
+
 - **Your subscription or your API key.** Claude Code and Codex run with a Claude or ChatGPT subscription, or with an API key, and can switch from one to the other when a quota runs out. OpenCode runs with an OpenAI or Anthropic key.
 - **Credentials the agent never sees.** The container has no internet access and holds placeholders. The Worker adds the real credentials to the few requests it allows: the model provider, a read-only fetch of your repository, and the connectors of that run.
 - **You decide what a run can do.** For each run or saved profile: the repository, model and effort, the MCP connectors, and for each connector the tool calls and arguments allowed. Reviews get read-only connector access. Publishing creates one new branch, from the Worker; the container never pushes.
 - **Independent reviews.** Review a commit with a different agent from the one that wrote it, for example Codex checking Claude Code's work.
 - **Tests in a sandbox.** Run a Vitest suite or a test command, with dependencies installed from the lockfile and the network closed while the tests run.
 - **A team without shared secrets.** Publish profiles and give each person or service only the ones they need. People sign in with their own identity through Cloudflare Access; scripts use their own tokens.
-
-Why it exists: a coding agent is only useful with real access, and it reads content nobody has reviewed. On a laptop or a CI runner, a prompt injection in that content has your keys within reach. Here the agent keeps the access it needs and loses the reach.
 
 ```mermaid
 flowchart LR
