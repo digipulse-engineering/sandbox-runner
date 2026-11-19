@@ -38,6 +38,19 @@ The [security model](docs/security.md) tells what is protected and what is not.
 
 Install the CLI, deploy the Worker to your Cloudflare account, connect a model provider, then start runs. The [quick start](#quick-start) shows the four steps.
 
+Requirements:
+
+| What | Cost | Notes |
+| --- | --- | --- |
+| Cloudflare account on the Workers Paid plan | US$5 per month | [Cloudflare Containers](https://developers.cloudflare.com/containers/pricing/) require it. |
+| Container usage | Included, then billed by use | At the default size (0.25 vCPU, 1 GiB memory, 4 GB disk), the plan includes about 25 hours of runs each month. After that, a run costs about US$0.03 per hour. |
+| Cloudflare Zero Trust | Free plan | Only for the remote MCP endpoint and sign-in with Cloudflare Access. |
+| A model provider | Your subscription or API key | A Claude or ChatGPT subscription, or an Anthropic or OpenAI API key. API keys are billed by the provider: set a spending limit. |
+| A GitHub App | Free | Only to run on private repositories. |
+| Node.js 24, Bun, Git and Docker | Free | Only on the machine that deploys the Worker. Clients need Node.js only. |
+
+Prices are Cloudflare's list prices on the date of this release. Check the pricing page before you rely on them.
+
 Guides:
 
 - **Install and operate:** [set up the Worker](#set-up-the-worker), [check](#check-a-cloudflare-installation) or [remove](#remove-a-cloudflare-installation) an installation, [connect a provider](#connect-or-reconnect-a-provider), [choose an authentication strategy](#choose-an-authentication-strategy).
@@ -46,8 +59,6 @@ Guides:
 - **Contribute:** [test locally](#test-locally), [CONTRIBUTING.md](CONTRIBUTING.md), [RELEASING.md](RELEASING.md).
 
 ## Quick start
-
-You need Node.js 24 or later, Bun, Git, Docker and a Cloudflare account on the Workers Paid plan, which [Cloudflare Containers](https://developers.cloudflare.com/containers/pricing/) require.
 
 ```sh
 npm install --global sandbox-runner-cli
