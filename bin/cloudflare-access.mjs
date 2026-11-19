@@ -9,6 +9,7 @@ import { CliError, exit, readTimeout } from "./cli-errors.mjs";
 import { cloudflareProjectTarget, manifestName } from "./cloudflare-project.mjs";
 import { accessEmailPattern } from "../worker/team-catalog.mjs";
 import { validAccessSettings } from "../worker/access-config.mjs";
+import { validCustomDomain } from "../worker/project-config.mjs";
 
 // A Cloudflare Access application with managed OAuth protects the Worker's workers.dev host. Access signs people in
 // and issues MCP client tokens; the Worker maps the verified email to a team client. Machine clients (the CLI, the
@@ -178,11 +179,14 @@ async function allServiceTokens(read) {
   }
 }
 
-function applicationBody(worker, domain, emails, redirects, tokenId, ips, nativeClients = true) {
+function applicationBody(worker, domains, emails, redirects, tokenId, ips, nativeClients = true) {
+  const [domain] = domains;
   return {
     type: "self_hosted",
     name: `Sandbox Runner MCP (${worker})`,
     domain,
+    // The custom domain and the workers.dev address are two entrances to the same Worker: one application covers both.
+    ...(domains.length > 1 ? { destinations: domains.map(uri => ({ type: "public", uri })) } : {}),
     session_duration: "24h",
     app_launcher_visible: false,
     policies: [
@@ -251,6 +255,9 @@ export async function cloudflareAccess(args, env) {
   const target = await cloudflareProjectTarget(options.directory, env);
   const { path, manifest } = await readManifest(target.directory);
   const recorded = manifest.access;
+  if (manifest.domain !== undefined && !validCustomDomain(manifest.domain)) {
+    throw configurationFailure("cloudflare_access_manifest_invalid", "The project manifest has an invalid custom domain.");
+  }
   if (recorded !== undefined && (!validAccessSettings(recorded) || !applicationId.test(recorded.appId ?? "") ||
       (recorded.scope !== undefined && !scopes.includes(recorded.scope)) ||
       (recorded.serviceTokenId !== undefined && !serviceTokenId.test(recorded.serviceTokenId)) ||
@@ -260,10 +267,15 @@ export async function cloudflareAccess(args, env) {
   // A rerun keeps the recorded scope; a new application protects the whole host.
   if (options.action === "enable") options.scope ??= recorded?.scope ?? (recorded === undefined ? "host" : "mcp");
   let domain;
+  let domains;
   let hostname;
   if (options.action === "enable") {
-    hostname = workerHostname(options.url, target.worker);
-    domain = options.scope === "host" ? hostname : hostname + "/mcp";
+    // --url names the workers.dev address, which proves the Worker. A custom domain recorded in the manifest becomes
+    // the published entrance, and the application protects both.
+    const hosts = [...(manifest.domain === undefined ? [] : [manifest.domain]), workerHostname(options.url, target.worker)];
+    hostname = hosts[0];
+    domains = hosts.map(host => options.scope === "host" ? host : host + "/mcp");
+    domain = domains[0];
     checkEmails(options.emails);
     checkRedirects(options.redirects);
     if (options.serviceTokenIps !== undefined) options.serviceTokenIps = checkIps(options.serviceTokenIps);
@@ -331,7 +343,8 @@ export async function cloudflareAccess(args, env) {
           host = "";
         }
         const recordedDomain = recorded.scope === "host" ? host : host + "/mcp";
-        if (existing.aud !== recorded.aud || host.split(".")[0] !== target.worker.toLowerCase() || !protects(existing, recordedDomain)) {
+        const ownHost = host.split(".")[0] === target.worker.toLowerCase() || (manifest.domain !== undefined && host === manifest.domain);
+        if (existing.aud !== recorded.aud || !ownHost || !protects(existing, recordedDomain)) {
           throw configurationFailure("cloudflare_access_conflict",
             `The recorded Access application ${recorded.appId} does not match this project. Nothing was deleted.`);
         }
@@ -369,10 +382,12 @@ export async function cloudflareAccess(args, env) {
     // A create whose result was lost leaves an application this command named; adopt it rather than duplicate it.
     const current = existing ?? (recorded === undefined
       ? listed.find(application => application?.name === generatedName && protects(application, domain)) : undefined);
-    const taken = listed.find(application => protects(application, domain) && application.id !== current?.id);
-    if (taken) {
-      throw configurationFailure("cloudflare_access_conflict",
-        `The Access application ${taken.id} already protects ${domain}. Remove it or record it before enabling.`);
+    for (const entrance of domains) {
+      const taken = listed.find(application => protects(application, entrance) && application.id !== current?.id);
+      if (taken) {
+        throw configurationFailure("cloudflare_access_conflict",
+          `The Access application ${taken.id} already protects ${entrance}. Remove it or record it before enabling.`);
+      }
     }
     // The recorded application may change scope in place: it keeps its ID, audience and OAuth clients. An application
     // adopted by name must already protect the requested domain.
@@ -413,7 +428,7 @@ export async function cloudflareAccess(args, env) {
       throw configurationFailure("cloudflare_access_service_token_missing",
         "--service-token-ip restricts the installation's service token: pass --service-token-file to create one.");
     }
-    const planned = applicationBody(target.worker, domain, options.emails, options.redirects,
+    const planned = applicationBody(target.worker, domains, options.emails, options.redirects,
       createToken ? "00000000-0000-0000-0000-000000000000" : tokenId, ips, options.nativeClients);
     const mcpUrl = `https://${hostname}/mcp`;
     if (options.dryRun) {
@@ -459,7 +474,7 @@ export async function cloudflareAccess(args, env) {
       await file.close();
       tokenId = created.id;
     }
-    const fresh = applicationBody(target.worker, domain, options.emails, options.redirects, tokenId, ips, options.nativeClients);
+    const fresh = applicationBody(target.worker, domains, options.emails, options.redirects, tokenId, ips, options.nativeClients);
     const body = current ? mergedBody(current, fresh, target.worker) : fresh;
     let saved;
     try {
