@@ -11,4 +11,5 @@ First public release. Sandbox Runner runs Claude Code, Codex and OpenCode agents
 - Saved and team-shared run profiles, with a team catalog of clients, profiles and optional read-only clients.
 - People reach the remote MCP endpoint with their own Cloudflare Access sign-in from ChatGPT, claude.ai, Claude Code or Codex. `cloudflare access enable` accepts loopback redirects for native clients unless `--web-clients-only` is passed.
 - An installation can publish its Worker on a custom domain recorded in `sandbox-runner.project.json`, next to its workers.dev address; `cloudflare access enable` then protects both.
+- Codex runs can search the web from OpenAI's cached index with every auth mode. Codex subscription runs previously had web search turned off.
 - Installations are created with `cloudflare setup`, configured in `sandbox-runner.project.json`, upgraded with `cloudflare upgrade` behind an admission guard, and protected with `cloudflare access enable`.
