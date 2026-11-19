@@ -140,7 +140,7 @@ Yes, through the model provider. The container itself has no internet access.
 | Action | Where it runs | Result |
 | --- | --- | --- |
 | Web search by the provider (WebSearch in Claude Code, `web_search` in Codex) | On the Anthropic or OpenAI servers | Allowed in every run. The API runs the search and returns the results to the model in its response. Codex searches OpenAI's cached index, not live pages. |
-| Downloads from the container (for example `curl`, `git clone` or `fetch`) | In the container | Blocked. No data leaves the container. |
+| Downloads from the container (WebFetch in Claude Code, `curl`, `git clone` or `fetch`) | In the container | Blocked. No data leaves the container. |
 
 The container opens no connection of its own. It talks only to the model provider, through the Worker.
 
