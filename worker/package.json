@@ -10,13 +10,13 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "2.0.0-beta.v.14",
-    "@modelcontextprotocol/client": "2.3.1",
+    "@modelcontextprotocol/client": "2.4.0",
     "cf": "1.0.0-beta.29",
     "typescript": "7.0.2",
-    "vite": "8.3.7"
+    "vite": "8.3.8"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.3.1",
-    "zod": "4.6.6"
+    "@modelcontextprotocol/server": "2.4.0",
+    "zod": "4.6.7"
   }
 }
