@@ -22,7 +22,11 @@ Each run gets a sandbox: a new Linux machine for that run only. It is a Cloudfla
 - **Tests in a sandbox.** Run a Vitest suite or a test command. Dependencies come from the lockfile, and the network is closed while the tests run.
 - **Start from anywhere.** Use a terminal or the local MCP server for any run. From ChatGPT, Claude, Claude Code or Codex, people who sign in through Cloudflare Access start the profiles granted to them. Your machine can be off during the run.
 - **Nothing built up on your machine.** Your laptop or server runs only the client. Runs leave no clones, dependency folders, caches or processes on it. The CLI keeps only a small private journal of profile submissions.
-- **A team without shared secrets.** Give each person or service only the profiles that it needs. People sign in with their own identity through Cloudflare Access. Scripts use their own tokens.
+- **A team without shared secrets.** Give each person or service only the [profiles](#profiles) that it needs. People sign in with their own identity through Cloudflare Access. Scripts use their own tokens.
+
+### Profiles
+
+A profile is a saved run configuration: the agent, its authentication mode, the repository, the model and effort, the MCP connectors and whether the run can publish a branch. The person who starts a profile supplies only the prompt and the commit. The operator decides which client can start which profile. People who use ChatGPT, Claude, Claude Code or Codex through Cloudflare Access always start profiles. See [Profiles, teams and MCP clients](docs/profiles.md).
 
 ```mermaid
 flowchart LR
@@ -85,6 +89,40 @@ sandbox-runner claude start 'Summarize what a Durable Object is.'
 
 [Install and operate](docs/install.md#set-up-the-worker) explains each step, starting with the secrets file that setup needs.
 
+### Set up with your agent
+
+Paste this prompt into Claude Code, Codex or another coding agent on your machine:
+
+```text
+Install Sandbox Runner from https://github.com/digipulse-engineering/sandbox-runner on my Cloudflare account.
+Follow the README quick start and docs/install.md.
+- Ask me for my Cloudflare account ID and the Worker name before you run any command.
+- Let me complete every sign-in and type every API key myself.
+- Create the secrets file with the command from docs/install.md. Never print, copy or commit a token, a key or that file.
+- Run each command with --dry-run first when it has that option, and show me the result.
+- When setup is done, run the canary from docs/install.md and show me its receipt.
+```
+
+Give your agent the bundled skill so that it knows the commands, profiles and recovery rules:
+
+```sh
+mkdir -p "$agent_skills_dir/sandbox-runner"
+sandbox-runner skill > "$agent_skills_dir/sandbox-runner/SKILL.md"
+```
+
+Set `agent_skills_dir` to a skill directory that your client loads.
+
+### Prompts for daily work
+
+Use these prompts with an agent that has the skill or a Sandbox Runner MCP server. Replace the parts in angle brackets.
+
+| Goal | Prompt |
+| --- | --- |
+| Run a task | `Use Sandbox Runner to run this task on commit <sha> of <owner/repo>: <task>. Start my executor profile, wait for the result, then show me the report and the published branch.` |
+| Review a commit | `Use Sandbox Runner to review commit <sha> of <owner/repo> with a different agent from the one that wrote it. Check it against: <criteria>. Show me the verdict and the findings.` |
+| Run the tests | `Use Sandbox Runner to run the Vitest suite of <owner/repo> at commit <sha>. Show me the failures, if any.` |
+| Create a profile | `Use Sandbox Runner to create a profile for <goal> on <owner/repo> from the closest template. Show me the draft before anything is published.` |
+
 ## FAQ
 
 ### Why Cloudflare and not a local Docker container?
@@ -102,7 +140,7 @@ Yes, through the model provider. The container itself has no internet access.
 | Action | Where it runs | Result |
 | --- | --- | --- |
 | Web search by the provider (WebSearch in Claude Code, `web_search` in Codex) | On the Anthropic or OpenAI servers | Allowed in every run. The API runs the search and returns the results to the model in its response. Codex searches OpenAI's cached index, not live pages. |
-| Downloads from the container (for example `curl`, `git clone` or `fetch`) | In the container | Blocked. No data leaves the container. |
+| Downloads from the container (WebFetch in Claude Code, `curl`, `git clone` or `fetch`) | In the container | Blocked. No data leaves the container. |
 
 The container opens no connection of its own. It talks only to the model provider, through the Worker.
 

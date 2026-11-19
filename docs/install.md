@@ -110,6 +110,15 @@ sandbox-runner cloudflare upgrade my-sandbox-runner --dry-run --guard-url https:
 sandbox-runner cloudflare upgrade my-sandbox-runner --guard-url https://my-sandbox-runner.SUBDOMAIN.workers.dev --guard-token-file /path/to/guard.json
 ```
 
+With an agent, paste this prompt from the project directory:
+
+```text
+Upgrade this Sandbox Runner installation with the installed CLI, as docs/install.md describes.
+Run the upgrade with --dry-run first and show me the files it replaces.
+Then run the upgrade. Do not reopen admissions: show me the guard.reopen request and wait for my go.
+Never print a token or the guard token file.
+```
+
 ### Options
 
 | Option | Use |

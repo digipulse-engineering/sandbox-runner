@@ -17,6 +17,15 @@ A profile is a named, reusable run configuration. You can write it from a templa
 
 ### Create a profile from a template
 
+With an agent that has the [skill](#install-the-sandbox-runner-skill), paste:
+
+```text
+Use Sandbox Runner to create a profile for <goal> on <owner/repo> from the closest template.
+Show me the draft and its input contract. Do not publish it until I agree.
+```
+
+To do it by hand:
+
 ```sh
 sandbox-runner profile template list
 sandbox-runner profile template get executor
