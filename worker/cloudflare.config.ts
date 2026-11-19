@@ -50,6 +50,8 @@ export default defineConfig({
     compatibilityFlags: ["nodejs_compat"],
     entrypoint,
     workersDev: !fixture,
+    // An optional custom domain from the manifest. Cloudflare creates its DNS record on the account's zone.
+    ...(fixture || project.domain === undefined ? {} : { domains: [project.domain] }),
     previewUrls: false,
     observability: { enabled: false },
     exports: {

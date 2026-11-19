@@ -73,3 +73,11 @@ test("containers accept only the agent application's name", () => {
     assert.throws(() => resolveProjectSettings({}, manifest({ containers })), /invalid/);
   }
 });
+
+test("a custom domain is read from the manifest and must be a host name outside workers.dev", () => {
+  assert.equal(resolveProjectSettings({}, manifest({ domain: "sandbox-runner.example.com" })).domain, "sandbox-runner.example.com");
+  assert.equal(Object.hasOwn(resolveProjectSettings({}, manifest({})), "domain"), false);
+  for (const domain of ["example", "Sandbox.example.com", "runner.team.workers.dev", "workers.dev", "10.0.0.1", "a..b", "https://x.example.com", 7]) {
+    assert.throws(() => resolveProjectSettings({}, manifest({ domain })), /custom domain/, String(domain));
+  }
+});

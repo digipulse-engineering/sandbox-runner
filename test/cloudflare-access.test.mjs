@@ -19,10 +19,10 @@ const tokenId = "7e3c1b0a-1d2e-4f30-8a4b-5c6d7e8f9a0b";
 const manifest = { schemaVersion: 1, cliVersion: "0.1.0", sdkCommit: "f".repeat(40), account, worker, profile: "default" };
 
 /** A project directory and a fake cf that records calls and answers like the Access API. */
-async function fixture(t, { plan = "ok", access } = {}) {
+async function fixture(t, { plan = "ok", access, extra = {} } = {}) {
   const directory = await mkdtemp(join(tmpdir(), "sandbox-runner-access-test-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  await writeFile(join(directory, "sandbox-runner.project.json"), JSON.stringify({ ...manifest, ...(access ? { access } : {}) }, null, 2) + "\n");
+  await writeFile(join(directory, "sandbox-runner.project.json"), JSON.stringify({ ...manifest, ...extra, ...(access ? { access } : {}) }, null, 2) + "\n");
   const executable = join(directory, "cf.mjs");
   const log = join(directory, "calls.jsonl");
   const script = `#!${process.execPath}\n` + String.raw`
@@ -372,4 +372,18 @@ test("address binding needs strict service token authentication, and CIDRs norma
     "--service-token-ip", "2001:db8:1:2000::2504", "--service-token-ip", "2001:DB8:0:0::/64"]);
   assert.equal(ok.status, 0, JSON.stringify(ok.output));
   assert.deepEqual(ok.output.serviceTokenIps, ["203.0.113.0/24", "2001:db8:1:2000::2504/128", "2001:db8::/64"]);
+});
+
+test("a custom domain becomes the published entrance, and one application protects both addresses", async t => {
+  const project = await fixture(t, { extra: { domain: "sandbox-runner.example.com" } });
+  const { status, output } = project.run(["enable", project.directory, "--url", url, "--email", "member@example.com"]);
+  assert.equal(status, 0);
+  assert.equal(output.mcpUrl, "https://sandbox-runner.example.com/mcp");
+  const create = (await project.calls()).find(args => args[3] === "create");
+  const body = JSON.parse(create[create.indexOf("--body") + 1]);
+  assert.equal(body.domain, "sandbox-runner.example.com");
+  assert.deepEqual(body.destinations, [{ type: "public", uri: "sandbox-runner.example.com" }, { type: "public", uri: `${worker}.team-sub.workers.dev` }]);
+  assert.equal((await project.manifest()).access.mcpUrl, "https://sandbox-runner.example.com/mcp");
+  const invalid = await fixture(t, { extra: { domain: "Not_A_Domain" } });
+  assert.equal(invalid.run(["enable", invalid.directory, "--url", url, "--email", "member@example.com"]).output.error, "cloudflare_project_invalid");
 });

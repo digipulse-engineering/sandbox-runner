@@ -97,6 +97,7 @@ Record what distinguishes an installation in its `sandbox-runner.project.json`. 
 
 `init` writes the account, Worker, profile and limit. `cloudflare access enable` adds the `access` block. Add the other entries by hand:
 
+- `domain` publishes the Worker on a custom domain, such as `sandbox-runner.example.com`, on a zone of the installation's Cloudflare account. Deploying creates the domain and its DNS record; the workers.dev address stays enabled. Run `cloudflare access enable` again after adding it: the Access application then protects both addresses, and the MCP URL becomes `https://<domain>/mcp`. Clients connected to the workers.dev address keep working. Reconnect them to the new URL when convenient.
 - `containers.agent.name` keeps an existing agent Container application whose name differs from the Worker name. Do not change it on a deployed installation: `cloudflare destroy` checks the receipt against it.
 - `settings` sets the Worker's plain-text options: `SANDBOX_RUNNER_OPENCODE`, `SANDBOX_RUNNER_GITHUB_CHECKOUT_TIMEOUT_MS` (default 10 minutes), `SANDBOX_RUNNER_API_TIMEOUT_MS` (default 25 seconds), `SANDBOX_RUNNER_GITHUB_PUBLICATION_MAX_BYTES`, `SANDBOX_RUNNER_VITEST_TIMEOUT_MS` (default 15 minutes, at most six hours), `SANDBOX_RUNNER_AGENT_TIMEOUT_MS`, `SANDBOX_RUNNER_MCP_CONNECTORS` and `SANDBOX_RUNNER_GITHUB_ALLOWLIST`. Write the two JSON options as JSON or as text. The allowlist is usually a Worker secret; record it here only if the installation has no secret of that name.
 

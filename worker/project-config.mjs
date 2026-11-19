@@ -11,6 +11,17 @@ export const defaultWorkerName = "sandbox-runner-j1";
 // The Worker and its Container applications are named by DNS labels (workers.dev host names).
 export const dnsLabelPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
+/**
+ * A custom domain for the Worker, such as sandbox-runner.example.com: a lowercase host name of two or more labels on a
+ * zone of the installation's account. The workers.dev address stays enabled next to it.
+ */
+export function validCustomDomain(value) {
+  if (typeof value !== "string" || value.length > 253) return false;
+  const labels = value.split(".");
+  return labels.length >= 2 && labels.every(label => dnsLabelPattern.test(label)) && !/[0-9]$/.test(labels.at(-1)) &&
+    value !== "workers.dev" && !value.endsWith(".workers.dev");
+}
+
 const decimal = (minimum, maximum) => value => /^[0-9]+$/.test(value) && Number(value) >= minimum && Number(value) <= maximum;
 const json = value => {
   try {
@@ -98,6 +109,8 @@ export function resolveProjectSettings(env, manifestText) {
   }
   const worker = manifest === undefined ? defaultWorkerName : manifest.worker;
   if (typeof worker !== "string" || !dnsLabelPattern.test(worker)) throw invalid("Worker name");
+  const domain = manifest?.domain;
+  if (domain !== undefined && !validCustomDomain(domain)) throw invalid("custom domain");
   const limit = manifest?.maxConcurrentRuns;
   if (limit !== undefined && (!Number.isSafeInteger(limit) || limit < 1)) throw invalid("concurrency limit");
   const recorded = manifest?.settings ?? {};
@@ -112,6 +125,7 @@ export function resolveProjectSettings(env, manifestText) {
     // The agent Container application, and the Vitest one, as the deployment and destroy commands verify them.
     agentContainer: manifest?.containers?.agent?.name ?? worker,
     worker,
+    ...(domain === undefined ? {} : { domain }),
     maxConcurrentRuns: limit,
     containers: containerSettings(manifest?.containers),
     settings,
