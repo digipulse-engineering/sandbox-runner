@@ -71,7 +71,7 @@ The container never holds a credential that can write to GitHub.
 
 - Each run, and each authentication attempt of a run, gets its own Durable Object and its own container.
 - Results are stored outside the container.
-- The container's filesystem is never saved or restored. The Worker refuses the agent runtime's workspace snapshots, so the checkout and the agent's files disappear with the container.
+- The container's filesystem is never saved or restored. The Worker refuses the agent runtime's workspace snapshots, so the checkout and the agent's files disappear with the container. The agent CLI's session transcript, including tool inputs and outputs, is copied to Durable Object storage and kept with the run.
 - At the end of a run, the Worker destroys the container and verifies that it is gone. It retries on failure and records `cleanup: "failed"` if it cannot confirm.
 - Agent CLIs, test commands and the checkout run as an unprivileged user (uid 10001). The publication snapshot and export steps run as root, after every agent process has exited.
 
@@ -86,7 +86,7 @@ The container never holds a credential that can write to GitHub.
 
 - Base images are pinned by digest. OpenCode, pnpm and the Go modules are verified against hashes.
 - The Agents SDK runtime is pinned to a commit, and deployment refuses another one.
-- GitHub Actions are pinned by commit. Releases are staged on npm from CI with a provenance statement and need a maintainer's approval with two-factor authentication. See [RELEASING.md](../RELEASING.md).
+- GitHub Actions are pinned by commit. Releases after the first are staged on npm from CI with a provenance statement and need a maintainer's approval with two-factor authentication. See [RELEASING.md](../RELEASING.md).
 - The public repository is configured to run CodeQL, secret scanning and Dependabot. These are repository settings, so a fork does not inherit them.
 
 ## What you cannot expect
@@ -94,14 +94,14 @@ The container never holds a credential that can write to GitHub.
 These limits are part of the design or are not solved yet. Plan for them.
 
 - **A prompt injection can still steer the agent.** The agent runs with its own permission prompts turned off, because nobody is there to answer them. The design limits what a steered agent can reach. It does not prevent the steering.
-- **Data can leave through the allowed routes.** The agent can put repository content in a model request, in an MCP tool call that a rule allows, or in a published branch. The Worker does not inspect model request bodies, so it does not block tools that run on the provider's side, such as web search, except for the Codex subscription route.
+- **Data can leave through the allowed routes.** The agent can put repository content in a model request, in an MCP tool call that a rule allows, or in a published branch. The Worker does not inspect model request bodies, so it blocks no tools that run on the provider's side, such as web search. Codex subscription runs start Codex with web search off, but that setting lives inside the container and the Worker does not enforce it.
 - **A "read-only" review is not enforced inside the container for Claude Code and Codex.** They are instructed not to edit, and they cannot publish, but they can change files in their disposable checkout. Only OpenCode reviews deny editing and shell tools. MCP read-only rules are enforced for every review.
 - **The control token is full authority.** Its holder can submit any run and use every write rule. Give team clients their own tokens and profiles.
 - **Connector rules are yours to write.** The gateway enforces the pins you configure. A broad rule, or a mutating action listed under `read`, is honoured as written.
 - **A connector write may be applied once even if the run then fails.** Check the upstream system before you submit the run again.
 - **No spending limit is enforced.** Set limits with your model provider. No agent deadline applies unless you configure one.
 - **Run output is stored as the agent produced it.** It can contain anything the agent read, and nothing redacts it. Treat it as untrusted data when you display it or pass it to another agent.
-- **Run data is kept until you remove the installation.** Results, events and the run index stay in Durable Object storage. Nothing expires them.
+- **Run data is kept until you remove the installation.** Results, events, the run index and the agent's session transcript stay in Durable Object storage. Nothing expires them.
 - **Workers logs are off by default.** The only audit records are the stored runs and the log of refused team requests.
 - **Claude Code and Codex are installed in the image by version, without an integrity hash.** Their dependencies are resolved when the image is built.
 - **The container's supervising daemon runs as root** inside the container, as do the publication snapshot and export steps. The agent, the checkout and the test processes drop to the unprivileged user.
@@ -134,7 +134,7 @@ The [OWASP Top 10 for Agentic Applications](https://genai.owasp.org/resource/owa
 | ASI05 Unexpected Code Execution | Expected by design: the agent runs arbitrary code, in a disposable container with no general network access. |
 | ASI06 Memory and Context Poisoning | Runs share no memory. Each starts from a commit in a new container. |
 | ASI07 Insecure Inter-Agent Communication | Agents do not talk to each other. A review receives a commit, not the producer's output. |
-| ASI08 Cascading Failures | A concurrency limit and the admission guard bound the number of runs. No spending limit. |
+| ASI08 Cascading Failures | An optional concurrency limit and the admission guard bound the number of runs. No spending limit. |
 | ASI09 Human-Agent Trust Exploitation | Out of scope. Results are marked as untrusted for MCP clients; a person or another agent decides what to do with them. |
 | ASI10 Rogue Agents | Runs end at their deadline or on cancellation, and all routes close. No deadline applies unless configured. |
 
@@ -158,5 +158,5 @@ The [OWASP Top 10 for Agentic Applications](https://genai.owasp.org/resource/owa
 ## Did we do a good enough job?
 
 - The Worker and CLI test suites in `worker/tests/` and `test/` cover these controls, including refusal paths. Not every sentence here maps to a named test.
-- On the public repository, every change to `main` must pass the test suites, an image build and CodeQL.
+- CI runs the test suites and builds both images for every change. On the public repository, a branch rule also requires them and CodeQL before a merge to `main`; that rule is a repository setting, not part of the code.
 - This document is reviewed against the code when the design changes. If you find a claim the code does not support, report it as a vulnerability.

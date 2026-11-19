@@ -14,14 +14,14 @@ The current recommendation is containment, not trust ([Anthropic's agent contain
 
 Each run gets a sandbox: a new Linux machine for that run only. It is a Cloudflare Container, which [runs in its own virtual machine](https://developers.cloudflare.com/containers/architecture/). The agent can install packages, run code and edit files in it. It cannot reach your computer, your network or your credentials. When the run ends, the Worker destroys the container and everything in it.
 
-- **Your subscription or your API key.** Claude Code and Codex use a Claude or ChatGPT subscription, or an API key. A run can change to the other credential when a quota runs out. OpenCode uses an OpenAI or Anthropic key.
+- **Your subscription or your API key.** Claude Code and Codex use a Claude or ChatGPT subscription, or an API key. A strategy can start with the API key and change to the subscription when the provider confirms that the key's quota is exhausted. OpenCode uses an OpenAI or Anthropic key.
 - **Credentials that the agent never sees.** The container has no internet access and holds placeholder values. The Worker adds the real credentials only to the requests that it allows. These are the model provider, a read-only fetch of your repository and the connectors of the run.
 - **Control of each run.** You set the repository, the model, the effort and the MCP connectors. For each connector, you set the tool calls and the arguments that the agent can use. Reviews get read-only connector access.
 - **Safe publication.** The container never pushes. The Worker creates one new branch from the changed files, after the container is gone.
 - **Independent reviews.** A different agent reviews the commit, for example Codex checks the work of Claude Code.
 - **Tests in a sandbox.** Run a Vitest suite or a test command. Dependencies come from the lockfile, and the network is closed while the tests run.
-- **Start from anywhere.** Use a terminal, Claude Code, Codex, ChatGPT or Claude. Your machine can be off during the run.
-- **Nothing left on your machine.** Your laptop or server runs only the client. Runs leave no files, folders, caches or processes on it.
+- **Start from anywhere.** Use a terminal or the local MCP server for any run. From ChatGPT, Claude, Claude Code or Codex, people who sign in through Cloudflare Access start the profiles granted to them. Your machine can be off during the run.
+- **Nothing built up on your machine.** Your laptop or server runs only the client. Runs leave no clones, dependency folders, caches or processes on it. The CLI keeps only a small private journal of profile submissions.
 - **A team without shared secrets.** Give each person or service only the profiles that it needs. People sign in with their own identity through Cloudflare Access. Scripts use their own tokens.
 
 ```mermaid
@@ -46,8 +46,8 @@ Requirements:
 | Container usage | Included, then billed by use | At the default size (0.25 vCPU, 1 GiB memory, 4 GB disk), the plan includes about 25 hours of runs each month. After that, a run costs about US$0.03 per hour. |
 | Cloudflare Zero Trust | Free plan | Only for the remote MCP endpoint and sign-in with Cloudflare Access. |
 | A model provider | Your subscription or API key | A Claude or ChatGPT subscription, or an Anthropic or OpenAI API key. API keys are billed by the provider: set a spending limit. |
-| A GitHub App | Free | Only to run on private repositories. |
-| Node.js 24, Bun, Git and Docker | Free | Only on the machine that deploys the Worker. Clients need Node.js only. |
+| A GitHub App | Free | For every run on a repository, which includes all Vitest and test-command runs. Only private repositories are supported. |
+| Node.js 24, Bun, Git, Docker and the Cloudflare `cf` CLI | Free | On the machine that deploys the Worker and connects credentials. Clients need Node.js only. Connecting a Claude subscription runs the local `claude setup-token`. |
 
 Prices are Cloudflare's list prices on the date of this release. Check the pricing page before you rely on them.
 
@@ -88,7 +88,7 @@ sandbox-runner cloudflare setup my-sandbox-runner --account <id> --worker my-san
 sandbox-runner cloudflare setup my-sandbox-runner --secrets-file /path/to/sandbox-runner.secrets.env
 ```
 
-Setup reuses an initialized project that matches the installed CLI template and reads its account, Worker and profile from the manifest. It keeps the project available if preparation, sign-in or deployment needs to be retried. Use the individual commands below to prepare and deploy a project you have customized and reviewed. The first deployment requires a control-token file. Connect the desired agent credentials after deployment.
+Setup reuses an initialized project that matches the installed CLI template and reads its account, Worker and profile from the manifest. It keeps the project available if preparation, sign-in or deployment needs to be retried. Use the individual commands below to prepare and deploy a project you have customized and reviewed. The first deployment requires a secrets file with the control token and the admission guard token (see below). Connect the desired agent credentials after deployment.
 
 You can also run the installation steps individually.
 
@@ -167,7 +167,11 @@ Record what distinguishes an installation in its `sandbox-runner.project.json`. 
   "maxConcurrentRuns": 4,
   "settings": {
     "SANDBOX_RUNNER_OPENCODE": "1",
-    "SANDBOX_RUNNER_MCP_CONNECTORS": { "github": { "url": "https://api.githubcopilot.com/mcp/" } }
+    "SANDBOX_RUNNER_MCP_CONNECTORS": {
+      "github": { "url": "https://api.githubcopilot.com/mcp/", "readAuth": "github-app", "writeAuth": "github-app",
+        "read": [{ "tool": "issue_read", "match": { "method": "get", "owner": "owner", "repo": "repo", "issue_number": 7 }, "arguments": [] }],
+        "write": [] }
+    }
   }
 }
 ```
@@ -178,7 +182,7 @@ Record what distinguishes an installation in its `sandbox-runner.project.json`. 
 - `containers.agent.name` keeps an existing agent Container application whose name differs from the Worker name. Do not change it on a deployed installation: `cloudflare destroy` checks the receipt against it.
 - `settings` sets the Worker's plain-text options: `SANDBOX_RUNNER_OPENCODE`, `SANDBOX_RUNNER_GITHUB_CHECKOUT_TIMEOUT_MS` (default 10 minutes), `SANDBOX_RUNNER_API_TIMEOUT_MS` (default 25 seconds), `SANDBOX_RUNNER_GITHUB_PUBLICATION_MAX_BYTES`, `SANDBOX_RUNNER_VITEST_TIMEOUT_MS` (default 15 minutes, at most six hours), `SANDBOX_RUNNER_AGENT_TIMEOUT_MS`, `SANDBOX_RUNNER_MCP_CONNECTORS` and `SANDBOX_RUNNER_GITHUB_ALLOWLIST`. Write the two JSON options as JSON or as text. The allowlist is usually a Worker secret; record it here only if the installation has no secret of that name.
 
-The CLI and the build reject an unknown entry or an invalid value. A project build reads these settings from its manifest only, so values exported for another installation never reach it; only builds from the repository checkout, without a manifest, read them from the environment. `cloudflare deploy` and `cloudflare setup` refuse to run while one of them is exported, rather than ignore it. Secrets stay on the Worker and never belong in the manifest. Every installation keeps SSH and log collection off for both Container applications, since containers handle run credentials and output.
+The CLI and the build reject an unknown entry, an out-of-range timeout or malformed JSON. The Worker validates the other values when it admits a run. A project build reads these settings from its manifest only, so values exported for another installation never reach it; only builds from the repository checkout, without a manifest, read them from the environment, except the allowlist. `cloudflare deploy`, `cloudflare setup` and `cloudflare upgrade` refuse to run while one of them other than the allowlist is exported, rather than ignore it. Secrets stay on the Worker and never belong in the manifest. Every installation keeps SSH and log collection off for both Container applications, since containers handle run credentials and output.
 
 These deadlines are failure containment, not targets: work that finishes earlier is unaffected. The checkout deadline bounds the container's Git fetch, which no request waits on. The API deadline bounds each operation the Worker runs against GitHub or an MCP connector: resolving the commit, checking connectors, and preparing or reconciling a run branch's publication as a whole. Some of those run while a start, status or result request waits, so keep it under the CLI's request timeout (`SANDBOX_RUNNER_TIMEOUT_MS`, 30 seconds by default). A start that both resolves a commit and checks OAuth connectors can wait for the resolution plus up to 30 seconds. Very large publications may need a higher value, at the cost of longer waits on those requests. Set them from durations observed on your repositories.
 
@@ -298,7 +302,7 @@ You can also supply the target with `--account` and `--worker`, and select a Clo
 
 Interactive messages for `auth` and `connector login` support English and French. Set `SANDBOX_RUNNER_LANG=fr` to choose French explicitly. The terminal otherwise uses the first nonempty setting among `LC_ALL`, `LC_MESSAGES`, and `LANG`. The local OAuth callback uses the browser's `Accept-Language` preferences when `SANDBOX_RUNNER_LANG` is unset. Regional variants such as `fr-BE` use the French catalog. English is the fallback. The structured JSON and MCP contracts stay stable across languages.
 
-| Agent | `--auth` | Worker secret |
+| Agent | `--mode` | Worker secret |
 | --- | --- | --- |
 | Claude Code | `subscription` | `CLAUDE_CODE_OAUTH_TOKEN` |
 | Claude Code | `api-key` | `ANTHROPIC_API_KEY` |
@@ -834,7 +838,7 @@ Add `accessEmail` to each member's client in the team catalog, in lowercase, and
 }
 ```
 
-A member acts through MCP exactly as with their token: the same profiles and the same runs. Removing `accessEmail` or the client from the catalog ends web access on the next request. The tools are the profile, run and cancel tools of the stdio server. Starts require a caller-generated `operationId` and the profile `revision`; repeat both to recover an uncertain start. Catalogs that use `accessEmail` require this CLI version or later for `team catalog get`.
+A member acts through MCP exactly as with their token: the same profiles and the same runs. Removing `accessEmail` or the client from the catalog ends web access on the next request. The endpoint offers `sandbox_runner_profile_list`, `sandbox_runner_profile_get`, `sandbox_runner_profile_check`, `sandbox_runner_start_profile`, `sandbox_runner_list`, `sandbox_runner_status`, `sandbox_runner_events`, `sandbox_runner_result` and `sandbox_runner_cancel`. It has no direct start, wait or retry tool: poll `sandbox_runner_status` until the run is settled. Starts require a caller-generated `operationId` and the profile `revision`; repeat both to recover an uncertain start. Catalogs that use `accessEmail` require this CLI version or later for `team catalog get`.
 
 ## Test locally
 
@@ -951,11 +955,11 @@ Yes, as any cloud provider can. The runs execute on Cloudflare in your own accou
 
 ### Can the agent search the web?
 
-The container has no internet access, so the agent cannot fetch pages itself. The model provider can still run its own tools, such as web search, because the Worker does not read model requests. Codex subscription runs turn off web search.
+The container has no internet access, so the agent cannot fetch pages itself. The model provider can still run its own tools, such as web search, because the Worker does not read model requests. Codex subscription runs start Codex with web search off. That is a Codex setting inside the container, not a Worker check.
 
 ### Does it work with public repositories?
 
-Not yet. A run checks out a private repository that is on the installation's allowlist. A run without a repository works on the prompt only.
+Not yet. A run checks out a private repository that is on the installation's allowlist. A run without a repository starts with an empty workspace.
 
 ### How is it different from Claude Code on the web or Codex cloud?
 
@@ -963,5 +967,5 @@ Those services run the agent in the vendor's sandbox, under the vendor's setting
 
 ### Can I use my Claude or ChatGPT subscription?
 
-Yes. `sandbox-runner auth` connects a Claude subscription for Claude Code, or a ChatGPT subscription for Codex. The provider's terms decide how you can use your plan, so read the [Anthropic consumer terms](https://www.anthropic.com/legal/consumer-terms) and the [OpenAI terms of use](https://openai.com/policies/terms-of-use). An [authentication strategy](#choose-an-authentication-strategy) can use an API key when the subscription quota runs out.
+Yes. `sandbox-runner auth` connects a Claude subscription for Claude Code, or a ChatGPT subscription for Codex. The provider's terms decide how you can use your plan, so read the [Anthropic consumer terms](https://www.anthropic.com/legal/consumer-terms) and the [OpenAI terms of use](https://openai.com/policies/terms-of-use). An [authentication strategy](#choose-an-authentication-strategy) can start with an API key and change to the subscription when the key's quota is exhausted.
 
