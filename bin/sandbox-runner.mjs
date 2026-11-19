@@ -79,7 +79,7 @@ const usage = [
   "sandbox-runner cloudflare upgrade [<directory>] [--dry-run] (--guard-url <origin> --guard-token-file <file> [--upgrade-id <uuid>] | --without-guard)",
   "sandbox-runner cloudflare destroy [<directory>] --receipt <deploy.json> [--dry-run]",
   "sandbox-runner cloudflare doctor [--account <id>] [--worker <name>] [--profile <name>]",
-  "sandbox-runner cloudflare access enable [directory] --url https://WORKER.SUBDOMAIN.workers.dev --email ADDRESS [--email ADDRESS] [--redirect-uri URI] [--service-token-file FILE] [--scope host|mcp] [--dry-run]",
+  "sandbox-runner cloudflare access enable [directory] --url https://WORKER.SUBDOMAIN.workers.dev --email ADDRESS [--email ADDRESS] [--redirect-uri URI] [--web-clients-only] [--service-token-file FILE] [--service-token-ip CIDR] [--scope host|mcp] [--dry-run]",
   "sandbox-runner cloudflare access status|disable [directory]",
   "sandbox-runner cloudflare canary claude|codex [--repo OWNER/REPO --sha COMMIT_SHA] [--auth subscription|api-key] [--operation-id UUID] [--timeout-ms <milliseconds>]",
   "sandbox-runner cloudflare canary vitest --repo OWNER/REPO --sha COMMIT_SHA [--operation-id UUID] [--timeout-ms <milliseconds>]",
