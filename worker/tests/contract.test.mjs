@@ -175,6 +175,11 @@ test("v4 resolves provider configuration once and distinguishes the caller's cho
   assert.equal(sameProviderRequest(implicit, explicit), false);
   assert.equal(sameProviderRequest(explicit, { ...explicit, explicitAuth: true }), false);
   assert.equal(sameProviderRequest(explicit, structuredClone(explicit)), true);
+  // A strategy profile request matches only another strategy profile request; runs stored before the field match as before.
+  const strategy = { ...implicit, authStrategy: true };
+  assert.equal(sameProviderRequest(strategy, structuredClone(strategy)), true);
+  assert.equal(sameProviderRequest(implicit, strategy), false);
+  assert.equal(sameProviderRequest(strategy, implicit), false);
 });
 
 test("resolves each used default independently and omits settings with no requested or configured value", () => {

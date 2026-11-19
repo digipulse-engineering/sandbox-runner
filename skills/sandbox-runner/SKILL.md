@@ -11,7 +11,7 @@ Install this skill in the client or orchestrator that operates Sandbox Runner. A
 
 ## Choose a template and generate a draft
 
-Inspect the repository for its lockfile, test command and instructions. Choose `executor`, `delivery-review`, `vitest` or `test-command` according to the mission. Use `tier2-review` for an operator preparing a route for the review broker. Use the configured billing choice for an agent, or obtain it from the operator if none is set.
+Inspect the repository for its lockfile, test command and instructions. Choose `executor`, `delivery-review`, `vitest` or `test-command` according to the mission. Use `tier2-review` for an operator preparing a route for the review broker. Use the configured billing choice for an agent, or obtain it from the operator if none is set. For Claude Code and Codex, `--auth strategy` makes the profile use the installation's authentication strategy, including its fallback.
 
 ```sh
 sandbox-runner profile template list

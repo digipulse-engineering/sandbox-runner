@@ -185,3 +185,5 @@ To spend the Anthropic credits first and then your Claude subscription:
 
 When Anthropic reports that the spend limit is reached (`enforced_spend_limit_reached`), the run changes to your subscription. If the credits run out before the limit, requests fail with "Your credit balance is too low" and the run does not change: keep the limit below the credits. OpenCode has no subscription mode, so OpenCode runs stop when the credits run out.
 
+**Tip: plan in ChatGPT, run on your credits.** Add Sandbox Runner to ChatGPT as an [MCP connector](docs/profiles.md#connect-an-mcp-client-with-your-identity). Plan the work in a ChatGPT conversation: it uses your ChatGPT plan, not your Claude subscription or your Anthropic credits. Then let ChatGPT start a Claude Code profile whose `authMode` is `strategy` (see [Choose a credential mode](docs/profiles.md#choose-a-credential-mode)). With the `api-key-first-then-subscription` strategy configured as above, the run spends your Anthropic credits first and changes to your subscription when the spend limit is reached.
+

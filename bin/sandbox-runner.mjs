@@ -600,7 +600,7 @@ function checkedRun(body, command) {
 
   const hasStrategy = body.strategy !== undefined || body.attempts !== undefined || body.fallbackReason !== undefined;
   const strategy = hasStrategy ? checkedStrategy(body) : undefined;
-  if ((hasStrategy && (!strategy || command.explicitAuth)) ||
+  if ((hasStrategy && (!strategy || command.explicitAuth)) || (command.authStrategy && !strategy) ||
       (command.name === "run" && !strategy && command.authMode !== effectiveAuthMode(body.agent, body.authMode))) return;
   const hasProviderContract = body.kind !== undefined || body.sandboxProvider !== undefined;
   if (command.version === "v4" || hasProviderContract) {

@@ -3,8 +3,8 @@ import test from "node:test";
 import { codexApiCreditPromoRestriction } from "../codex-api-diagnostics.ts";
 import { mcpWriteClaimed } from "../mcp-run-access.ts";
 import { runEventsPage } from "../run-events.ts";
-import { activeAttempt, activeEgressAttempt, advanceStrategy, attemptName, newStrategyRun, policyFor, pollStrategy,
-  requestStrategyCancellation, STRATEGY_RUN, strategyView, writeStrategyRun } from "../strategy.ts";
+import { activeAttempt, activeEgressAttempt, admissionPolicy, advanceStrategy, attemptName, newStrategyRun, policyFor, pollStrategy,
+  requestStrategyCancellation, STRATEGY_RUN, strategyReadiness, strategyView, writeStrategyRun } from "../strategy.ts";
 
 const id = "12b712d0-f53d-45e3-9128-17d3667c5487";
 const input = { operationId: id, agent: "codex", authMode: "api-key", prompt: "  same prompt  " };
@@ -100,6 +100,34 @@ test("parses only the selected secret and requires spend cap attestation for eve
   ]) {
     assert.equal(policyFor("codex", { SANDBOX_RUNNER_CODEX_AUTH_STRATEGY: raw }), "auth_strategy_invalid");
   }
+});
+
+test("a strategy profile run never falls back to the default mode", () => {
+  const configured = { SANDBOX_RUNNER_CODEX_AUTH_STRATEGY: JSON.stringify({ strategy: "api-key-first-then-subscription",
+    apiSpendCapConfirmed: true }) };
+  const invalid = { SANDBOX_RUNNER_CODEX_AUTH_STRATEGY: "{}" };
+  // A run without an explicit mode and without a strategy profile keeps the default mode when no strategy exists.
+  assert.equal(admissionPolicy("codex", {}, true, false), undefined);
+  // A strategy profile run is refused instead.
+  assert.equal(admissionPolicy("codex", {}, true, true), "auth_strategy_invalid");
+  assert.equal(admissionPolicy("codex", invalid, true, true), "auth_strategy_invalid");
+  assert.equal(admissionPolicy("codex", invalid, true, false), "auth_strategy_invalid");
+  assert.equal(admissionPolicy("codex", configured, true, true)?.strategy, "api-key-first-then-subscription");
+  // An explicit mode or an OpenCode run never reads a strategy.
+  const unread = { get SANDBOX_RUNNER_CODEX_AUTH_STRATEGY() { assert.fail("read strategy for an explicit run"); } };
+  assert.equal(admissionPolicy("codex", unread, false, false), undefined);
+  assert.equal(admissionPolicy("opencode", unread, true, true), undefined);
+});
+
+test("readiness of a strategy profile requires a valid strategy and a credential for each of its modes", () => {
+  const env = strategy => ({ SANDBOX_RUNNER_CLAUDE_AUTH_STRATEGY: JSON.stringify({ strategy, apiSpendCapConfirmed: true }) });
+  const only = available => mode => mode === available;
+  assert.equal(strategyReadiness("claude", {}, () => true), "auth_strategy_invalid");
+  assert.equal(strategyReadiness("claude", { SANDBOX_RUNNER_CLAUDE_AUTH_STRATEGY: "{}" }, () => true), "auth_strategy_invalid");
+  assert.equal(strategyReadiness("claude", env("api-key-first-then-subscription"), () => true), undefined);
+  assert.equal(strategyReadiness("claude", env("api-key-first-then-subscription"), only("api-key")), "provider_credential_not_configured");
+  assert.equal(strategyReadiness("claude", env("api-key-only"), only("api-key")), undefined);
+  assert.equal(strategyReadiness("claude", env("subscription-only"), only("api-key")), "provider_credential_not_configured");
 });
 
 test("all strategies reserve one initial attempt with a distinct identity", async () => {

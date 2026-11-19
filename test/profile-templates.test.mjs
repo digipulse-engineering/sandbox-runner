@@ -21,7 +21,7 @@ test("discover the portable Cloudflare templates and their conditional creation 
 test("generate standalone deterministic profiles across harness and authentication choices", async () => {
   for (const id of ["executor", "delivery-review"]) {
     for (const harness of ["claude", "codex"]) {
-      for (const authMode of ["api-key", "subscription"]) {
+      for (const authMode of ["api-key", "subscription", "strategy"]) {
         const input = { ...target, harness, authMode };
         const result = await createProfileFromTemplate(id, input);
         assert.deepEqual(result, await createProfileFromTemplate(id, input));

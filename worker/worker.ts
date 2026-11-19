@@ -75,13 +75,13 @@ import { appendRunEvents, parseEventsCursor, pendingVitestEventsPage, runEventsP
 import { initializeRunIndex, openCodeListHeader, parseRunListQuery, pendingRunIndex, publishPendingRun, readRunIndex,
   readTeamDenials, recordRunIndex, recordTeamDenial, runIndexName } from "./run-index";
 import type { RunListQuery, RunSummary, TeamDenial } from "./run-index";
-import { ProfileError, profileReceipt, profileRevision, resolveProfileRequest, validProfileSlug } from "./run-profiles.mjs";
+import { ProfileError, profileReceipt, profileRevision, resolveProfileRequest, usesAuthStrategy, validProfileSlug } from "./run-profiles.mjs";
 import { serveAccessMcp } from "./mcp-access";
 import type { AccessMcpEnv } from "./mcp-access";
 import { allowedRunOwner, catalogStorageKeys, resolveTeamProfile, sameTokenDigest, storedCatalog, teamClient, teamClientByEmail, teamProfile, TeamRequestError, tokenDigest } from "./team-access";
 import type { TeamGrant, TeamCatalog } from "./team-access";
 import { digest, parseTeamCatalog } from "./team-catalog.mjs";
-import { activeAttempt, activeEgressAttempt, advanceStrategy, attemptName, expireStrategy, newStrategyRun, policyFor,
+import { activeAttempt, activeEgressAttempt, advanceStrategy, attemptName, expireStrategy, newStrategyRun, admissionPolicy, strategyReadiness,
   requestStrategyCancellation, settled, strategyPreparationAllowed, STRATEGY_RUN, strategyAlarmTime, strategyDeadlineDue, strategyView, writeStrategyRun } from "./strategy";
 import type { AttemptReservation, Reservation, StrategyEnv, StrategyRun } from "./strategy";
 import { parseTestSubmission, sameTestSubmission } from "./vitest/admission";
@@ -287,11 +287,16 @@ function profileReadiness(profile: Record<string, unknown>, env: WorkerEnv) {
 
   if (profile.kind === "agent") {
     const review = profile.operation === "review";
-    const provider = profile.harness === "opencode" && isModelProvider(profile.modelProvider)
-      ? openCodeProviderConfig(profile.modelProvider, review)
-      : (profile.harness === "claude" || profile.harness === "codex") && isAuthMode(profile.authMode)
-        ? providerConfig(profile.harness, profile.authMode) : undefined;
-    check("credentials", provider && providerCredential(provider, env) ? undefined : "provider_credential_not_configured");
+    if ((profile.harness === "claude" || profile.harness === "codex") && usesAuthStrategy(profile)) {
+      const harness = profile.harness;
+      check("credentials", strategyReadiness(harness, env, mode => !!providerCredential(providerConfig(harness, mode), env)));
+    } else {
+      const provider = profile.harness === "opencode" && isModelProvider(profile.modelProvider)
+        ? openCodeProviderConfig(profile.modelProvider, review)
+        : (profile.harness === "claude" || profile.harness === "codex") && isAuthMode(profile.authMode)
+          ? providerConfig(profile.harness, profile.authMode) : undefined;
+      check("credentials", provider && providerCredential(provider, env) ? undefined : "provider_credential_not_configured");
+    }
     if (profile.harness === "claude") {
       const settings = resolveClaudeSettings({ model: defaults?.model ?? allowedOverrides?.model?.[0],
         effort: defaults?.effort ?? allowedOverrides?.effort?.[0] }, env);
@@ -433,7 +438,10 @@ async function readInput(request: Request, path: string, team?: TeamGrant):
         const vitest = parseTestSubmission(resolved, true);
         if (vitest) return { vitest: { ...vitest, profile } };
         const agent = parseProviderRunInput(resolved);
-        return agent && { ...agent, input: { ...agent.input, profile } };
+        if (!agent) return;
+        const providerRequest = usesAuthStrategy(value.profile.body) && !agent.explicitAuth
+          ? { ...agent.providerRequest, authStrategy: true as const } : agent.providerRequest;
+        return { ...agent, providerRequest, input: { ...agent.input, profile } };
       }
       const vitest = parseTestSubmission(value);
       return vitest ? { vitest } : parseProviderRunInput(value);
@@ -1031,6 +1039,18 @@ export class Run extends DurableObject<WorkerEnv> {
       : this.reserve(submission.input, { explicitAuth: submission.explicitAuth, providerRequest: submission.providerRequest, admission });
   }
 
+  // A strategy profile must never fall back to the default mode. An older runtime ignores authStrategy,
+  // so these admissions use their own RPC name: an object still on that runtime throws instead of admitting.
+  async reserveStrategyProfile(submission: Submission, admission?: AdmissionOwner): Promise<ReferenceReservation> {
+    if ("vitest" in submission || submission.explicitAuth || submission.providerRequest?.authStrategy !== true) {
+      throw new Error("Strategy profile admission mismatch");
+    }
+    const { input } = submission;
+    if (input.profile?.source === "worker-catalog") return this.reserveTeam(submission, admission);
+    if (input.repositoryRef) return this.reserveReference(submission, admission);
+    return this.reserve(input, { explicitAuth: false, providerRequest: submission.providerRequest, admission });
+  }
+
   async reserveReference(submission: Submission, admission?: AdmissionOwner): Promise<ReferenceReservation> {
     const input = "vitest" in submission ? submission.vitest : submission.input;
     const { operationId: id, repositoryRef } = input;
@@ -1221,7 +1241,7 @@ export class Run extends DurableObject<WorkerEnv> {
       if (connectorAccess && !connectorAccess.connectors.every(name => connectorPolicy && Object.hasOwn(connectorPolicy, name))) {
         return "mcp_connector_configuration_invalid";
       }
-      const policy = implicit && input.agent !== "opencode" ? policyFor(input.agent, this.env) : undefined;
+      const policy = admissionPolicy(input.agent, this.env, implicit, providerRequest?.authStrategy === true);
       if (policy === "auth_strategy_invalid") return policy;
       // A strategy child receives the root's admitted snapshot, even when it is empty.
       const settings = strategyRunId !== undefined ? options.settings
@@ -2365,7 +2385,9 @@ async function serveApi(request: Request, env: WorkerEnv, ctx: ExecutionContext,
       const input = "vitest" in submission ? submission.vitest : submission.input;
       const id = input.operationId;
       const owner = ctx.exports.Run.getByName(id);
-      const reserve = (admission?: AdmissionOwner) => team ? owner.reserveTeam(submission, admission)
+      const reserve = (admission?: AdmissionOwner) =>
+        "input" in submission && submission.providerRequest?.authStrategy ? owner.reserveStrategyProfile(submission, admission)
+        : team ? owner.reserveTeam(submission, admission)
         : input.repositoryRef ? owner.reserveReference(submission, admission)
         : "vitest" in submission ? owner.reserveVitest(submission.vitest, admission)
         : owner.reserve(submission.input, { explicitAuth: submission.explicitAuth, providerRequest: submission.providerRequest, admission });

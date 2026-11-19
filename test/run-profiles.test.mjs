@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseProviderRunInput } from "../worker/contract.ts";
-import { parseProfileConfig, profileInputContract, profileReceipt, profileUsage, resolveProfileRequest, validateProfileInputs } from "../worker/run-profiles.mjs";
+import { parseProfileConfig, profileInputContract, profileReceipt, profileUsage, resolveProfileRequest, usesAuthStrategy,
+  validateProfileInputs } from "../worker/run-profiles.mjs";
 import { parseTestSubmission } from "../worker/vitest/admission.ts";
 
 const id = "48f9fa4c-cc36-46bd-8b7d-f86f09ec79db";
@@ -52,6 +53,26 @@ test("pins an agent profile authentication mode while preserving caller selectio
   assert.equal(Object.hasOwn(resolveProfileRequest(request(review)), "authMode"), false);
   assert.notEqual((await profileReceipt(pinnedRequest)).revision, (await profileReceipt(request(subscription))).revision);
   assert.deepEqual(await profileReceipt(JSON.parse(JSON.stringify(pinnedRequest))), await profileReceipt(pinnedRequest));
+});
+
+test("defers a strategy profile to the installation's strategy and refuses a caller mode", () => {
+  const start = { kind: "agent", harness: "codex", operation: "start", authMode: "strategy",
+    defaults: { repo: "Team/Repo", model: "gpt-6.1-sol", effort: "high" } };
+  const native = resolveProfileRequest(request(start));
+  assert.equal(Object.hasOwn(native, "authMode"), false);
+  const parsed = parseProviderRunInput(native);
+  assert.equal(parsed.explicitAuth, false);
+  assert.equal(usesAuthStrategy(start), true);
+  assert.equal(usesAuthStrategy({ ...start, authMode: "api-key" }), false);
+  assert.equal(Object.hasOwn(profileInputContract(start).properties, "authMode"), false);
+  for (const authMode of ["subscription", "api-key", "strategy"]) {
+    assert.deepEqual(validateProfileInputs(start, { source: { sha }, prompt: "Fix it.", authMode }), [{ field: "authMode",
+      code: "override_not_allowed", message: "This profile uses the installation's authentication strategy." }]);
+  }
+  assert.equal(Object.hasOwn(resolveProfileRequest(request({ ...review, authMode: "strategy" })), "authMode"), false);
+  assert.throws(() => parseProfileConfig({ schemaVersion: 1, profiles: { example: { kind: "agent", harness: "opencode",
+    operation: "start", modelProvider: "openai", authMode: "strategy", defaults: { repo: "Team/Repo" } } } }),
+  { code: "invalid_profile" });
 });
 
 test("resolves both test runners with the selected source and preserves command arguments", () => {
