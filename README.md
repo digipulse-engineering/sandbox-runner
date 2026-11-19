@@ -97,7 +97,16 @@ Yes, as any cloud provider can. The runs execute on Cloudflare in your own accou
 
 ### Can the agent search the web?
 
-The container has no internet access, so the agent cannot fetch pages itself. The model provider can still run its own tools, such as web search, because the Worker does not read model requests. Codex subscription runs start Codex with web search off. That is a Codex setting inside the container, not a Worker check.
+Yes, through the model provider. The container itself has no internet access.
+
+| Action | Where it runs | Result |
+| --- | --- | --- |
+| Web search by the provider (WebSearch in Claude Code, `web_search` in Codex) | On the Anthropic or OpenAI servers | Allowed. The API runs the search and returns the results to the model in its response. |
+| Downloads from the container (for example `curl`, `git clone` or `fetch`) | In the container | Blocked. No data leaves the container. |
+
+The container opens no connection of its own. It talks only to the model provider, through the Worker.
+
+Search results are content that nobody has reviewed, and the search query leaves through the provider. The Worker does not read model requests, so it does not block provider web search. Codex subscription runs start Codex with web search off. That is a Codex setting inside the container, not a Worker check.
 
 ### Does it work with public repositories?
 
