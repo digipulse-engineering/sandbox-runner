@@ -148,10 +148,11 @@ test("v4 validates Codex settings, preserves replay identity and builds pinned p
   const { input } = parseProviderRunInput({ ...request, ...settings });
   assert.deepEqual(input.overrides, settings);
   assert.deepEqual(codexPresetSettings(input.overrides, input.authMode), {
-    model: settings.model, config: ['model_reasoning_effort="xhigh"'],
+    model: settings.model, config: ['web_search="cached"', 'model_reasoning_effort="xhigh"'],
   });
-  assert.deepEqual(codexPresetSettings({}, "api-key"), { model: "gpt-5.1", config: [] });
-  assert.deepEqual(codexPresetSettings({}, "subscription"), { model: "gpt-6.1-sol", config: [] });
+  // Every Codex run can search the web from OpenAI's cached index, whatever its auth mode.
+  assert.deepEqual(codexPresetSettings({}, "api-key"), { model: "gpt-5.1", config: ['web_search="cached"'] });
+  assert.deepEqual(codexPresetSettings({}, "subscription"), { model: "gpt-6.1-sol", config: ['web_search="cached"'] });
   assert.equal(parseClaudeOverrideInput({ ...request, ...settings }), undefined);
   assert.equal(matchesRunInput(input, structuredClone(input)), true);
   assert.equal(matchesRunInput(input, parseProviderRunInput({ ...request, ...settings, effort: "high" }).input), false);

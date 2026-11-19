@@ -113,7 +113,6 @@ const CODEX_SUBSCRIPTION_CONFIG = [
   'model_providers.gateway.env_key="ACCESS_TOKEN"',
   "model_providers.gateway.requires_openai_auth=false",
   "model_providers.gateway.supports_websockets=false",
-  'web_search="disabled"',
   "features.enable_request_compression=false",
   "check_for_update_on_startup=false",
 ];

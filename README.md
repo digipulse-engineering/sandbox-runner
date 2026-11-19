@@ -101,12 +101,12 @@ Yes, through the model provider. The container itself has no internet access.
 
 | Action | Where it runs | Result |
 | --- | --- | --- |
-| Web search by the provider (WebSearch in Claude Code, `web_search` in Codex) | On the Anthropic or OpenAI servers | Allowed. The API runs the search and returns the results to the model in its response. |
+| Web search by the provider (WebSearch in Claude Code, `web_search` in Codex) | On the Anthropic or OpenAI servers | Allowed in every run. The API runs the search and returns the results to the model in its response. Codex searches OpenAI's cached index, not live pages. |
 | Downloads from the container (for example `curl`, `git clone` or `fetch`) | In the container | Blocked. No data leaves the container. |
 
 The container opens no connection of its own. It talks only to the model provider, through the Worker.
 
-Search results are content that nobody has reviewed, and the search query leaves through the provider. The Worker does not read model requests, so it does not block provider web search. Codex subscription runs start Codex with web search off. That is a Codex setting inside the container, not a Worker check.
+Search results are content that nobody has reviewed, and the search query leaves through the provider. The Worker does not read model requests, so it neither blocks nor limits provider web search. The cached index for Codex is a Codex setting inside the container, not a Worker check.
 
 ### Does it work with public repositories?
 
