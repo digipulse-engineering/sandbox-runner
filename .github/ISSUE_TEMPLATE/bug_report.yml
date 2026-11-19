@@ -1,0 +1,57 @@
+name: Bug report
+description: Something does not work as the documentation says.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report a vulnerability privately instead, as SECURITY.md explains. Do not paste tokens, keys or private repository content.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command or MCP tool you used, and what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. sandbox-runner ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Sandbox Runner version
+      description: The CLI version (`npm ls -g sandbox-runner-cli`) or the commit you deployed.
+    validations:
+      required: true
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Run kind
+      options:
+        - Claude Code
+        - Codex
+        - OpenCode
+        - Review
+        - Vitest or test command
+        - Setup, upgrade or Access
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: receipt
+    attributes:
+      label: Error code or receipt
+      description: The `error` code and the run `status` and `reason`. Remove any token and any private content first.
+      render: json
