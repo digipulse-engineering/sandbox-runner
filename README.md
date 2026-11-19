@@ -96,8 +96,12 @@ Paste this prompt into Claude Code, Codex or another coding agent on your machin
 ```text
 Install Sandbox Runner from https://github.com/digipulse-engineering/sandbox-runner on my Cloudflare account.
 Follow the README quick start and docs/install.md.
-- Ask me for my Cloudflare account ID and the Worker name before you run any command.
-- Let me complete every sign-in and type every API key myself.
+- Install the Sandbox Runner CLI and the Cloudflare `cf` CLI if they are missing.
+- Start the Cloudflare sign-in with `cf auth create sandbox-runner` and let me approve it in my browser.
+- Read my account ID with `cf --profile sandbox-runner accounts list`. If I have more than one account, ask me which one to use.
+- Propose a Worker name, such as `sandbox-runner`, and wait for my confirmation.
+- Use the `sandbox-runner` Cloudflare profile in every command.
+- Let me complete every other sign-in and type every API key myself.
 - Create the secrets file with the command from docs/install.md. Never print, copy or commit a token, a key or that file.
 - Run each command with --dry-run first when it has that option, and show me the result.
 - When setup is done, run the canary from docs/install.md and show me its receipt.
