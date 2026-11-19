@@ -235,6 +235,55 @@ test("a profile submission is traceable and recoverable after a lost response an
   assert.deepEqual((await invoke(url, ["status", explicitId], env)).output.profile, retried.output.profile);
 });
 
+test("a strategy profile starts without an explicit mode and reports a missing strategy as configuration", async t => {
+  const scratch = await mkdtemp(join(tmpdir(), "sandbox-runner-strategy-profile-"));
+  t.after(() => rm(scratch, { recursive: true, force: true }));
+  const file = join(scratch, "profiles.json");
+  const env = { SANDBOX_RUNNER_PROFILES: file, XDG_STATE_HOME: scratch };
+  const profile = { kind: "agent", harness: "codex", operation: "start", authMode: "strategy",
+    defaults: { repo: "Owner/Repo", model: "gpt-6.1-sol", effort: "high" } };
+  await writeFile(file, JSON.stringify({ schemaVersion: 1, profiles: { executor: profile } }));
+  const strategy = "api-key-first-then-subscription";
+  const requests = [];
+  let refuse = false;
+  let defaultMode = false;
+  const url = await worker(t, async (request, response) => {
+    const body = await requestBody(request);
+    requests.push(body);
+    if (refuse) return json(response, 503, { error: "auth_strategy_invalid" });
+    const run = resolveProfileRequest(body);
+    if (defaultMode) {
+      return json(response, 202, runRecord(body.operationId, "codex", { kind: "agent", sandboxProvider: "cloudflare",
+        repository: run.repository, model: run.model, effort: run.effort, authMode: "api-key", profile: await profileReceipt(body) }));
+    }
+    const attempt = { operationId: "9fa305fe-2aec-429f-859b-27068fabeff3", authMode: "api-key", status: "queued", cleanup: "pending",
+      model: run.model, effort: run.effort };
+    return json(response, 202, runRecord(body.operationId, "codex", { kind: "agent", sandboxProvider: "cloudflare",
+      repository: run.repository, model: run.model, effort: run.effort, authMode: "api-key", strategy, attempts: [attempt],
+      profile: await profileReceipt(body) }));
+  });
+  const args = ["start", "executor", "--sha", "a".repeat(40), "--operation-id", explicitId, "--", "Fix the bug"];
+  const started = await invoke(url, args, env);
+  assert.equal(started.code, 0, JSON.stringify(started.output));
+  assert.equal(started.output.strategy, strategy);
+  assert.equal(Object.hasOwn(requests[0], "authMode"), false);
+  const pinned = await invoke(url, [...args.slice(0, -2), "--auth", "subscription", "--", "Fix the bug"], env);
+  assert.equal(pinned.code, 2);
+  assert.deepEqual(pinned.output.issues.map(({ field, code }) => [field, code]), [["authMode", "override_not_allowed"]]);
+  assert.equal(requests.length, 1);
+  // A default-mode run in reply to a strategy profile is not accepted as success.
+  defaultMode = true;
+  const fallback = await invoke(url, ["start", "executor", "--sha", "c".repeat(40), "--operation-id",
+    "0d6f1c3e-8a52-4c43-9d0e-5a7b3f2e1c90", "--", "Fix it"], env);
+  assert.equal(fallback.output.error, "invalid_response");
+  defaultMode = false;
+  refuse = true;
+  const refused = await invoke(url, ["start", "executor", "--sha", "b".repeat(40), "--operation-id", "c3982431-3622-428d-a21f-c6f4c9ea20f9", "--", "Fix it"], env);
+  assert.equal(refused.code, 3);
+  assert.equal(refused.output.error, "auth_strategy_invalid");
+  assert.match(refused.output.message, /sandbox-runner codex setup/);
+});
+
 test("profile templates emit deterministic standalone drafts without contacting a Worker", async () => {
   const env = { SANDBOX_RUNNER_TEAM: "1" };
   const result = await invoke("", ["profile", "template", "list"], env);

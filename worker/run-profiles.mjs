@@ -5,6 +5,9 @@ const reservedSlugs = new Set(["constructor", "prototype"]);
 const agentHarnesses = new Set(["claude", "codex", "opencode"]);
 const reviewers = new Set(["claude", "codex"]);
 const authModes = new Set(["subscription", "api-key"]);
+// A profile may defer to the installation's authentication strategy instead of pinning one mode.
+// Its runs start without an explicit mode, so the Worker applies the configured strategy or refuses the run.
+export const strategyAuthMode = "strategy";
 const optionFields = ["repo", "model", "effort"];
 const commonFields = ["kind", "description", "usage", "sandboxProvider", "defaults", "allowedOverrides"];
 const inputFields = ["source", "prompt", "producerAgent", "authMode", "overrides"];
@@ -57,7 +60,13 @@ function profileOptionFields(profile) {
 }
 
 function validAuthMode(agent, mode) {
+  if (mode === strategyAuthMode) return reviewers.has(agent);
   return authModes.has(mode) && (agent !== "opencode" || mode === "api-key");
+}
+
+/** True when the profile's agent runs use the installation's authentication strategy. */
+export function usesAuthStrategy(profile) {
+  return object(profile) && profile.kind === "agent" && profile.authMode === strategyAuthMode;
 }
 
 function profileUsages(profile) {
@@ -161,12 +170,13 @@ function inputRules(profile) {
   const { defaults = {}, allowedOverrides = {} } = profile;
   const agent = profile.kind === "agent";
   const review = agent && profile.operation === "review";
-  const pinnedAuth = profile.authMode ?? (profile.harness === "opencode" ? "api-key" : undefined);
+  const strategy = profile.authMode === strategyAuthMode;
+  const pinnedAuth = strategy ? undefined : profile.authMode ?? (profile.harness === "opencode" ? "api-key" : undefined);
   return {
-    agent, review, exactSha: review || profile.checkout === "shallow", defaults, allowedOverrides, pinnedAuth,
+    agent, review, exactSha: review || profile.checkout === "shallow", defaults, allowedOverrides, pinnedAuth, strategy,
     requiredOverrides: optionFields.filter(field => Object.hasOwn(allowedOverrides, field) && !Object.hasOwn(defaults, field)),
     producers: [...reviewers].filter(harness => harness !== profile.harness),
-    authOptions: pinnedAuth === undefined ? [...authModes] : [pinnedAuth],
+    authOptions: strategy ? [] : pinnedAuth === undefined ? [...authModes] : [pinnedAuth],
   };
 }
 
@@ -191,8 +201,10 @@ export function profileInputContract(profile) {
       properties.producerAgent = { type: "string", enum: rules.producers, description: "Harness that produced the candidate." };
       required.push("producerAgent");
     }
-    properties.authMode = { type: "string", enum: rules.authOptions,
-      ...(rules.pinnedAuth === undefined ? {} : { default: rules.pinnedAuth }) };
+    if (!rules.strategy) {
+      properties.authMode = { type: "string", enum: rules.authOptions,
+        ...(rules.pinnedAuth === undefined ? {} : { default: rules.pinnedAuth }) };
+    }
   }
   properties.overrides = { type: "object", additionalProperties: false, properties: overrideFields,
     ...(rules.requiredOverrides.length ? { required: rules.requiredOverrides } : {}) };
@@ -241,7 +253,9 @@ function agentIssues(rules, input, add) {
   } else if (Object.hasOwn(input, "producerAgent")) {
     add("producerAgent", "unexpected_field", "Only review profiles accept a producer harness.");
   }
-  if (Object.hasOwn(input, "authMode") && !rules.authOptions.includes(input.authMode)) {
+  if (Object.hasOwn(input, "authMode") && rules.strategy) {
+    add("authMode", "override_not_allowed", "This profile uses the installation's authentication strategy.");
+  } else if (Object.hasOwn(input, "authMode") && !rules.authOptions.includes(input.authMode)) {
     if (rules.pinnedAuth !== undefined && authModes.has(input.authMode)) {
       add("authMode", "override_not_allowed", "This profile pins a different authentication mode.", rules.authOptions);
     } else add("authMode", "invalid_value", "Supply a supported authentication mode.", rules.authOptions);
@@ -316,7 +330,7 @@ export function resolveProfileRequest(value) {
 
   const { prompt, authMode: requestedAuth, producerAgent } = input;
   const { harness: agent, operation, publish, mcp, modelProvider } = profile;
-  const authMode = profile.authMode ?? requestedAuth;
+  const authMode = profile.authMode === strategyAuthMode ? undefined : profile.authMode ?? requestedAuth;
   return { ...base, kind: "agent", agent, prompt,
     ...(agent === "opencode" ? { modelProvider, authMode: "api-key" } : authMode === undefined ? {} : { authMode }),
     ...(model === undefined ? {} : { model }), ...(effort === undefined ? {} : { effort }),

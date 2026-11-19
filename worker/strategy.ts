@@ -3,7 +3,7 @@ import type { AgentDeadline, AgentDeadlineError } from "./agent-deadline.ts";
 import { runSettings, sameRunSettings } from "./agent-settings.ts";
 import type { AgentSettings } from "./agent-settings.ts";
 import { providerView, terminal } from "./contract.ts";
-import type { PresetAgent, AuthMode, AuthStrategy, ProviderError, RunInput, RunProfileReceipt, RunRouting, RunView, StrategyAttempt } from "./contract.ts";
+import type { Agent, PresetAgent, AuthMode, AuthStrategy, ProviderError, RunInput, RunProfileReceipt, RunRouting, RunView, StrategyAttempt } from "./contract.ts";
 import type { GithubRepository } from "./github-read.ts";
 import { connectorAccessFor, mcpWriteClaimed, sameConnectorNames } from "./mcp-run-access.ts";
 import type { ConnectorAccess } from "./mcp-run-access.ts";
@@ -76,6 +76,30 @@ export type Reservation = RunView | ProviderError | AgentDeadlineError | Admissi
   "github_publication_configuration_invalid" | "run_index_unavailable" |
   "mcp_connector_configuration_invalid" | "mcp_connector_not_allowed" | "mcp_connector_auth_required" | null;
 export type AttemptReservation = Reservation | { view: RunView; receipt: GithubPreparedPublication };
+
+/** The credential modes a strategy may use, in attempt order. */
+export function strategyModes(strategy: AuthStrategy): readonly AuthMode[] {
+  return modes[strategy];
+}
+
+/**
+ * The strategy for a new run, or why the run cannot start. Only a run without an explicit mode uses a strategy.
+ * A profile that defers to the installation's strategy (required) never falls back to the default mode.
+ */
+export function admissionPolicy(agent: Agent, env: StrategyEnv, implicit: boolean, required: boolean):
+  Policy | "auth_strategy_invalid" | undefined {
+  if (!implicit || agent === "opencode") return;
+  const policy = policyFor(agent, env);
+  return policy === undefined && required ? "auth_strategy_invalid" : policy;
+}
+
+/** Readiness of a profile that defers to the strategy: the strategy is valid and every mode it may use has a credential. */
+export function strategyReadiness(agent: PresetAgent, env: StrategyEnv, hasCredential: (mode: AuthMode) => boolean):
+  "auth_strategy_invalid" | "provider_credential_not_configured" | undefined {
+  const policy = policyFor(agent, env);
+  if (typeof policy !== "object") return "auth_strategy_invalid";
+  return strategyModes(policy.strategy).every(hasCredential) ? undefined : "provider_credential_not_configured";
+}
 
 export function policyFor(agent: PresetAgent, env: StrategyEnv): Policy | "auth_strategy_invalid" | undefined {
   const raw = agent === "claude" ? env.SANDBOX_RUNNER_CLAUDE_AUTH_STRATEGY : env.SANDBOX_RUNNER_CODEX_AUTH_STRATEGY;

@@ -117,6 +117,7 @@ Setup uses the same account, Worker and Cloudflare profile options as `auth`.
 - Setup saves one strategy per agent on the target Worker.
 - Each credential update becomes active when setup publishes it.
 - The previous strategy or default mode applies until setup publishes the new choice.
+- A run uses the strategy when it has no explicit mode: a CLI or local MCP run without `--auth`, or a profile whose `authMode` is `strategy` (see [Choose a credential mode](profiles.md#choose-a-credential-mode)).
 
 | Strategy | First attempt | Second attempt after confirmed quota exhaustion |
 | --- | --- | --- |

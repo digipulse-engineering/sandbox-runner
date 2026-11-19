@@ -40,7 +40,8 @@ export type RunInput = {
   profile?: RunProfileReceipt;
 };
 export type SandboxProvider = "cloudflare";
-export type ProviderRequest = { sandboxProvider?: string; explicitAuth: boolean };
+// authStrategy marks a profile run that must use the installation's authentication strategy.
+export type ProviderRequest = { sandboxProvider?: string; explicitAuth: boolean; authStrategy?: true };
 export type RunRouting = { request: ProviderRequest; sandboxProvider: SandboxProvider };
 export type ProviderError = "sandbox_provider_unavailable" | "sandbox_provider_default_invalid";
 export type StrategyAttempt = AgentSettings & {
@@ -225,7 +226,8 @@ export function resolveRunRouting(request: ProviderRequest, configuredDefault?: 
 }
 
 export function sameProviderRequest(left: ProviderRequest | undefined, right: ProviderRequest | undefined): boolean {
-  return left?.explicitAuth === right?.explicitAuth && left?.sandboxProvider === right?.sandboxProvider;
+  return left?.explicitAuth === right?.explicitAuth && left?.sandboxProvider === right?.sandboxProvider &&
+    left?.authStrategy === right?.authStrategy;
 }
 
 export function providerView(routing: RunRouting | undefined): Pick<RunView, "kind" | "sandboxProvider"> {

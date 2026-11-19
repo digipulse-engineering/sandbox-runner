@@ -23,7 +23,7 @@ const profileSummary = z.strictObject({
   description: z.string().optional(), sandboxProvider: z.literal("cloudflare").optional(),
   harness: agent.optional(), operation: z.enum(["start", "review"]).optional(),
   runner: z.enum(["vitest", "command"]).optional(), modelProvider: modelProvider.optional(),
-  authMode: z.enum(["subscription", "api-key"]).optional(), defaults: profileDefinition.optional(),
+  authMode: z.enum(["subscription", "api-key", "strategy"]).optional(), defaults: profileDefinition.optional(),
   repositories: z.array(z.string()), connectors: z.array(z.string()), publish: z.boolean(),
 });
 const profileIssue = z.strictObject({

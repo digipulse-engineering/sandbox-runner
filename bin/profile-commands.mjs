@@ -5,7 +5,7 @@ import { isAbsolute, join } from "node:path";
 import { parseArgs } from "node:util";
 import { hasDuplicateJsonKeys } from "../worker/profile-json.mjs";
 import { parseProfileConfig, ProfileError, profileInputContract, profileInputErrorMessage, profileReceipt, profileRevision,
-  profileUsage, resolveProfileRequest, validateProfileInputs, validProfileSlug } from "../worker/run-profiles.mjs";
+  profileUsage, resolveProfileRequest, usesAuthStrategy, validateProfileInputs, validProfileSlug } from "../worker/run-profiles.mjs";
 import { validRepositorySlug } from "../worker/run-input-validation.mjs";
 import { CliError, exit } from "./cli-errors.mjs";
 import { createProfileFromTemplate, getProfileTemplate, listProfileTemplates } from "./profile-templates.mjs";
@@ -21,7 +21,7 @@ const issueCodes = new Set(["required", "invalid_type", "invalid_sha", "invalid_
 const readinessCodes = {
   sandbox: ["sandbox_provider_unavailable", "sandbox_provider_default_invalid", "opencode_disabled"],
   repository: ["github_checkout_not_configured", "github_allowlist_invalid", "github_repository_not_allowed"],
-  credentials: ["provider_credential_not_configured"],
+  credentials: ["provider_credential_not_configured", "auth_strategy_invalid"],
   settings: ["claude_defaults_invalid"],
   connectors: ["mcp_connector_not_allowed", "mcp_connector_configuration_invalid", "mcp_connector_auth_required", "mcp_connector_repository_unverified"],
   publication: ["github_publication_configuration_invalid"],
@@ -245,6 +245,8 @@ async function profileCommand(submission, { retry = false, team } = {}) {
     repository: resolved.repository, sandboxProvider: resolved.sandboxProvider, agent: resolved.agent,
     authMode: resolved.authMode ?? (resolved.agent === "claude" ? "subscription" : "api-key"),
     explicitAuth: resolved.authMode !== undefined,
+    // A strategy profile run must come back as a strategy run, never as a default-mode run.
+    ...(usesAuthStrategy(profile.body) ? { authStrategy: true } : {}),
     reviewProducer: resolved.reviewProducer, modelProvider: resolved.modelProvider,
     connectors: resolved.connectors, publish: resolved.publish,
     overrides: { model: resolved.model, effort: resolved.effort },

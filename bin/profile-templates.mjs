@@ -25,7 +25,8 @@ const templates = {
   },
 };
 const agentHarnesses = ["claude", "codex", "opencode"];
-const authModes = ["api-key", "subscription"];
+// "strategy" defers to the installation's strategy, set with sandbox-runner claude|codex setup.
+const authModes = ["api-key", "subscription", "strategy"];
 const modelProviders = ["openai", "anthropic"];
 const defaultModels = { claude: "claude-sonnet-5-5", codex: "gpt-6.1-sol" };
 const effortValues = ["low", "medium", "high", "xhigh", "max"];

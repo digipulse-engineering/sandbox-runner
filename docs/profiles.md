@@ -61,11 +61,11 @@ The templates cover execution, delivery review, Vitest and fixed commands.
 
 For team profiles, `profile check <slug>` checks the Worker configuration for the profile's declared scope. It does not call a model, validate a live provider grant or run a test.
 
-**Billing mode.** Each template fixes one billing mode per agent profile.
+**Billing mode.** Each template fixes the billing mode of an agent profile.
 
 | Template | Billing mode |
 | --- | --- |
-| Claude, Codex | The author must choose a key or a subscription. |
+| Claude, Codex | The author must choose a key, a subscription or the installation's strategy (`--auth strategy`). |
 | OpenCode | Key. Requires a model provider. |
 | Tier-2 | Subscription, an explicit model and `xhigh`. |
 
@@ -176,14 +176,19 @@ For Codex:
 
 Publication is an opt-in field on Claude and Codex `start` profiles.
 
-#### Pin a credential mode
+#### Choose a credential mode
 
-Set the optional `authMode` of an agent profile to `api-key` or `subscription`. It selects one credential mode for all submissions of the profile. OpenCode supports `api-key`.
+Set the optional `authMode` of an agent profile. OpenCode supports `api-key` only.
 
-| Profile | Caller selection |
+| `authMode` | Runs of the profile |
 | --- | --- |
-| Pins a mode | A different CLI `--auth` or MCP `authMode` is rejected. |
-| No pin | Accepts an explicit caller selection. Otherwise uses the Worker's authentication strategy. |
+| `api-key` or `subscription` | Use this mode. A different CLI `--auth` or MCP `authMode` is rejected. |
+| `strategy` | Use the installation's [authentication strategy](credentials.md#choose-an-authentication-strategy), including its fallback. Callers cannot select a mode. Claude Code and Codex only. |
+| Not set | Use the caller's CLI `--auth` or MCP `authMode`. Otherwise use the installation's strategy, or the default mode if there is none. |
+
+A team catalog requires `authMode` on Claude Code and Codex profiles. Use `strategy` to give team members the fallback from the API key to the subscription.
+
+If the installation has no valid strategy for the agent, the Worker refuses a `strategy` run with `auth_strategy_invalid`. It never uses the default mode instead. `profile check` reports `auth_strategy_invalid`, or a missing credential for any mode of the strategy.
 
 #### Permissions and provenance
 
