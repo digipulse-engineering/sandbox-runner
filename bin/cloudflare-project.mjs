@@ -53,6 +53,7 @@ export async function cloudflareProjectTarget(path, env) {
     env, (code, message) => new CliError(code, message, exit.configuration));
   const { agentContainer } = installation;
   return { ...target, directory, sdkCommit: project.sdkCommit, maxConcurrentRuns: project.maxConcurrentRuns,
+    ...(installation.domain === undefined ? {} : { domain: installation.domain }),
     applications: { agent: agentContainer, vitest: target.worker + "-vitest" },
     // Projects initialized before installation settings carry a rewritten config that ignores these blocks.
     usesInstallationSettings: project.settings !== undefined || project.containers !== undefined };
