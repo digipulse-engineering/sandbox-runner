@@ -57,6 +57,7 @@ Guides:
 - **Run work:** [run a prompt](#run-a-prompt), [use a private GitHub repository](#start-in-a-private-github-repository), [use MCP connectors](#use-mcp-connectors-in-claude-code-and-codex), [run Vitest](#run-a-vitest-suite) or [a test command](#run-a-test-command), [review a commit](#review-a-commit), [start OpenCode](#start-opencode).
 - **Share and automate:** [save a run configuration](#save-a-run-configuration), [share profiles with a team](#share-profiles-with-a-team), [install the skill](#install-the-sandbox-runner-skill).
 - **Contribute:** [test locally](#test-locally), [CONTRIBUTING.md](CONTRIBUTING.md), [RELEASING.md](RELEASING.md).
+- **Questions:** [FAQ](#faq).
 
 ## Quick start
 
@@ -937,3 +938,30 @@ advances one step using newline-delimited JSON.
    the result, since EOF cancels pending operations.
 
 Existing `start`, `review` and profile commands retain their current API.
+
+## FAQ
+
+### Why Cloudflare and not a local Docker container?
+
+A local container shares your machine, and often your network. Your credentials are usually on that machine too. A Cloudflare Container runs in its own virtual machine, and the credentials stay in a Worker outside it. Runs continue when your machine is off, and you can start them from ChatGPT or Claude.
+
+### Can Cloudflare see my code?
+
+Yes, as any cloud provider can. The runs execute on Cloudflare in your own account. Worker logs are off, and run results stay in Durable Object storage in your account until you remove the installation. The model provider also receives the code that the agent sends to it. See the [security model](docs/security.md).
+
+### Can the agent search the web?
+
+The container has no internet access, so the agent cannot fetch pages itself. The model provider can still run its own tools, such as web search, because the Worker does not read model requests. Codex subscription runs turn off web search.
+
+### Does it work with public repositories?
+
+Not yet. A run checks out a private repository that is on the installation's allowlist. A run without a repository works on the prompt only.
+
+### How is it different from Claude Code on the web or Codex cloud?
+
+Those services run the agent in the vendor's sandbox, under the vendor's settings. Sandbox Runner runs Claude Code, Codex and OpenCode in your own account. You set the connector rules, the profiles and who can use them, and the run results stay with you. A review can also use a different agent from the one that wrote the code.
+
+### Can I use my Claude or ChatGPT subscription?
+
+Yes. `sandbox-runner auth` connects a Claude subscription for Claude Code, or a ChatGPT subscription for Codex. The provider's terms decide how you can use your plan, so read the [Anthropic consumer terms](https://www.anthropic.com/legal/consumer-terms) and the [OpenAI terms of use](https://openai.com/policies/terms-of-use). An [authentication strategy](#choose-an-authentication-strategy) can use an API key when the subscription quota runs out.
+
