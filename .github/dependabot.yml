@@ -44,6 +44,13 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    # Keep security updates of the current Node and Go releases. A new Node major or Go minor release changes the
+    # runtime of every agent and needs its own migration with live runs, so Dependabot does not propose it.
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+      - dependency-name: golang
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     groups:
       base-images:
         patterns: ["*"]
