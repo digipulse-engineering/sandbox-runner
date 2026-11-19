@@ -99,7 +99,7 @@ Follow the README quick start and docs/install.md.
 - Install the Sandbox Runner CLI and the Cloudflare `cf` CLI if they are missing.
 - Start the Cloudflare sign-in with `cf auth create sandbox-runner` and let me approve it in my browser.
 - Read my account ID with `cf --profile sandbox-runner accounts list`. If I have more than one account, ask me which one to use.
-- Propose a Worker name, such as `sandbox-runner`, and wait for my confirmation.
+- Propose a Worker name, such as `sandbox-runner-myproject`, and wait for my confirmation.
 - Use the `sandbox-runner` Cloudflare profile in every command.
 - Let me complete every other sign-in and type every API key myself.
 - Create the secrets file with the command from docs/install.md. Never print, copy or commit a token, a key or that file.
