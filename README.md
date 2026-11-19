@@ -1,12 +1,17 @@
 # Sandbox Runner
 
-Run coding agents, reviews and test suites in disposable Cloudflare Containers, on your own Cloudflare account, without handing the agent your credentials.
+Run Claude Code, Codex and OpenCode in disposable sandboxes on your own Cloudflare account, with your subscription or an API key, and decide exactly what each run can reach.
 
-<!-- Maintainer: the two paragraphs below are a draft of the "why". Rewrite them in your own words. -->
+Start a run from a terminal, from Claude Code or Codex, or from ChatGPT and Claude. The agent works on a commit of your repository in its own container, and you get a report or a new branch back. Your machine does not need to stay on.
 
-A coding agent needs real access to be useful: a model provider account, your repository, sometimes your issue tracker or other tools. It also reads content nobody has reviewed, and a prompt injection in that content can turn the agent against you. Running the agent on a laptop or a CI runner puts those credentials within its reach.
+- **Your subscription or your API key.** Claude Code and Codex run with a Claude or ChatGPT subscription, or with an API key, and can switch from one to the other when a quota runs out. OpenCode runs with an OpenAI or Anthropic key.
+- **Credentials the agent never sees.** The container has no internet access and holds placeholders. The Worker adds the real credentials to the few requests it allows: the model provider, a read-only fetch of your repository, and the connectors of that run.
+- **You decide what a run can do.** For each run or saved profile: the repository, model and effort, the MCP connectors, and for each connector the tool calls and arguments allowed. Reviews get read-only connector access. Publishing creates one new branch, from the Worker; the container never pushes.
+- **Independent reviews.** Review a commit with a different agent from the one that wrote it, for example Codex checking Claude Code's work.
+- **Tests in a sandbox.** Run a Vitest suite or a test command, with dependencies installed from the lockfile and the network closed while the tests run.
+- **A team without shared secrets.** Publish profiles and give each person or service only the ones they need. People sign in with their own identity through Cloudflare Access; scripts use their own tokens.
 
-Sandbox Runner keeps them out of reach. Each run gets one container with no internet access. A Worker holds the credentials and adds them to the few outbound requests it allows. Results are stored outside the container, which is destroyed when the run ends.
+Why it exists: a coding agent is only useful with real access, and it reads content nobody has reviewed. On a laptop or a CI runner, a prompt injection in that content has your keys within reach. Here the agent keeps the access it needs and loses the reach.
 
 ```mermaid
 flowchart LR
@@ -15,15 +20,6 @@ flowchart LR
   container -->|"intercepted requests only"| worker
   worker -->|"adds credentials on allowed routes"| upstream["Model provider, GitHub, MCP servers"]
 ```
-
-What it does:
-
-- Runs Claude Code, Codex and OpenCode on a commit of a private GitHub repository. Claude Code and Codex runs can publish their result as a branch.
-- Runs an independent review of a commit with a different agent, with read-only connector access.
-- Runs a repository's Vitest suite or a fixed test command, with the network closed during the tests.
-- Lets agents use MCP connectors through rules that pin the tools and arguments each run may use.
-- Shares saved run profiles with a team, each client limited to the profiles you grant.
-- Serves a CLI, a local MCP server, and a remote MCP endpoint behind Cloudflare Access for clients such as ChatGPT and Claude.
 
 Read the [security model](docs/security.md) for what is protected and what is not.
 
