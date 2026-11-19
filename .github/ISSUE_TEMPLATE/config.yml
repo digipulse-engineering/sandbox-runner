@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/digipulse-engineering/sandbox-runner/security/advisories/new
+    about: Report security issues privately. Do not open a public issue.
+  - name: Ask a question
+    url: https://github.com/digipulse-engineering/sandbox-runner/discussions/categories/q-a
+    about: Questions about setup and usage.

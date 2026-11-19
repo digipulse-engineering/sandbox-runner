@@ -1,5 +1,11 @@
 # Sandbox Runner
 
+[![test](https://github.com/digipulse-engineering/sandbox-runner/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/digipulse-engineering/sandbox-runner/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/github/license/digipulse-engineering/sandbox-runner)](LICENSE)
+[![Node.js 24+](https://img.shields.io/badge/node-%E2%89%A524-339933?logo=nodedotjs&logoColor=white)](package.json)
+[![Runs on Cloudflare Containers](https://img.shields.io/badge/runs%20on-Cloudflare%20Containers-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/containers/)
+[![Security policy](https://img.shields.io/badge/security-policy-informational)](SECURITY.md)
+
 Run Claude Code, Codex and OpenCode in disposable sandboxes on your own Cloudflare account. Use your subscription or an API key. Decide what each run can reach.
 
 ## Why

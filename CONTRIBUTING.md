@@ -2,6 +2,8 @@
 
 Thank you for helping improve Sandbox Runner.
 
+Everyone who takes part follows the [code of conduct](CODE_OF_CONDUCT.md).
+
 ## Set up
 
 You need Node.js 24 or later, Bun (to rebuild the pinned ContainerHarness runtime), Go (for the container checkout helper) and Git. Docker is needed only to build and deploy container images.
