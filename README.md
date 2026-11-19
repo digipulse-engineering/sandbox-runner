@@ -166,5 +166,22 @@ Those services run the agent in the vendor's sandbox, under the vendor's setting
 
 ### Can I use my Claude or ChatGPT subscription?
 
-Yes. `sandbox-runner auth` connects a Claude subscription for Claude Code, or a ChatGPT subscription for Codex. The provider's terms decide how you can use your plan, so read the [Anthropic consumer terms](https://www.anthropic.com/legal/consumer-terms) and the [OpenAI terms of use](https://openai.com/policies/terms-of-use). An [authentication strategy](docs/credentials.md#choose-an-authentication-strategy) can start with an API key and change to the subscription when the key's quota is exhausted.
+Yes. `sandbox-runner auth` connects a Claude subscription for Claude Code, or a ChatGPT subscription for Codex. The provider's terms decide how you can use your plan, so read the [Anthropic consumer terms](https://www.anthropic.com/legal/consumer-terms) and the [OpenAI terms of use](https://openai.com/policies/terms-of-use). To spend your subscription's API credits first, see the next question.
+
+### Can I use the API credits included with my subscription?
+
+Partly. This was true in November 2026; check the provider's current terms.
+
+| Credits | Claude Code | Codex | OpenCode |
+| --- | --- | --- | --- |
+| [Anthropic credits](https://platform.claude.com/docs/en/about-claude/api-credits-for-subscribers) (Max, Ultra, Team) | Yes, with an API key from the linked Claude Console organization. Sandbox Runner runs `claude -p`, which [Anthropic bills as Agent SDK usage](https://support.claude.com/en/articles/17154008). Interactive Claude Code is not covered. | Not applicable | Yes, with an Anthropic key from that organization |
+| [OpenAI credits](https://help.openai.com/en/articles/20001626-api-credits-benefit-for-eligible-chatgpt-subscriptions) (Pro, Business) | Not applicable | No. OpenAI excludes Codex used with an API key and can refuse the key (`provider_codex_api_credit_promo_restricted`). | Yes, with an OpenAI key from the linked organization |
+
+To spend the Anthropic credits first and then your Claude subscription:
+
+1. Create the API key in the Claude Console organization that receives the credits.
+2. Set a spend limit at or below your monthly credits for that key's workspace or organization.
+3. Connect the key and your subscription, then choose the `api-key-first-then-subscription` [authentication strategy](docs/credentials.md#choose-an-authentication-strategy) for Claude Code.
+
+When Anthropic reports that the spend limit is reached (`enforced_spend_limit_reached`), the run changes to your subscription. If the credits run out before the limit, requests fail with "Your credit balance is too low" and the run does not change: keep the limit below the credits. OpenCode has no subscription mode, so OpenCode runs stop when the credits run out.
 
