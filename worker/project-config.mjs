@@ -66,7 +66,7 @@ const isObject = value => value !== null && typeof value === "object" && !Array.
 const onlyKeys = (value, keys) => Object.keys(value).every(key => keys.includes(key));
 
 function invalid(detail) {
-  return new Error(`The project manifest has an invalid ${detail}. See "Installation settings" in the README.`);
+  return new Error(`The project manifest has an invalid ${detail}. See "Installation settings" in docs/install.md.`);
 }
 
 function settingValue(name, value) {
