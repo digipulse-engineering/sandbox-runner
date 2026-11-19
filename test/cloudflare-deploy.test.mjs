@@ -29,7 +29,7 @@ function invoke(args, options = {}) {
 const guardToken = "guard-" + "c".repeat(64);
 
 async function fixture(t, plan = "fresh", { vitest = false, index = false, context, maxConcurrentRuns, versionMetadata = false,
-  agentName } = {}) {
+  agentName, domain, builtDomains } = {}) {
   const root = await mkdtemp(join(tmpdir(), "sandbox-runner-deploy-test-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const project = join(root, "worker");
@@ -41,6 +41,11 @@ async function fixture(t, plan = "fresh", { vitest = false, index = false, conte
     const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
     manifest.containers = { agent: { name: agentName } };
     await writeFile(manifestPath, JSON.stringify(manifest));
+  }
+  if (domain !== undefined) {
+    const manifestPath = join(project, "sandbox-runner.project.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    await writeFile(manifestPath, JSON.stringify({ ...manifest, domain }));
   }
   await mkdir(join(project, "pinned-src"));
   await mkdir(join(project, "node_modules"));
@@ -57,7 +62,7 @@ async function fixture(t, plan = "fresh", { vitest = false, index = false, conte
 import { existsSync, lstatSync, readFileSync, appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 const { account, worker, profile, token, versionId, appId, vitestNamespace, indexNamespace, ambient, log, plan, vitest, index,
-  dockerConfig, maxConcurrentRuns, versionMetadata, agentName } = FIXTURE;
+  dockerConfig, maxConcurrentRuns, versionMetadata, agentName, builtDomains } = FIXTURE;
 const agent = agentName ?? worker;
 const [flag, selected, ...args] = process.argv.slice(2);
 if (flag !== "--profile" || selected !== profile) throw Error("wrong profile");
@@ -110,6 +115,7 @@ if (args.join(" ") === "accounts get") {
       ...(maxConcurrentRuns === undefined ? {} : {SANDBOX_RUNNER_INSTALLATION_MAX_RUNS:{type:"text",
         value:String(plan === "wrong-build-limit" ? maxConcurrentRuns + 1 : maxConcurrentRuns)}})},
     exports:exported, ...(plan === "routes" ? {routes:[{pattern:"unrelated.example"}]} : {}),
+    ...(builtDomains === undefined ? {} : {domains: builtDomains}),
   });
   for (const name of appNames) {
     mkdirSync(join(output, "containers", name), {recursive:true});
@@ -159,7 +165,7 @@ if (args.join(" ") === "accounts get") {
       id:plan === "duplicate-namespace-id" ? appId : indexNamespace,use_sqlite:true}] : [])]);
 } else throw Error("Unexpected cf command");
 `.replace("FIXTURE", JSON.stringify({ account, worker, profile, token, versionId, appId, vitestNamespace, indexNamespace, ambient, log,
-  plan, vitest, index, dockerConfig, maxConcurrentRuns, versionMetadata, agentName })), { mode: 0o700 });
+  plan, vitest, index, dockerConfig, maxConcurrentRuns, versionMetadata, agentName, builtDomains })), { mode: 0o700 });
 
   async function run(args, env = {}, command = "deploy", directory = project) {
     const result = invoke(["cloudflare", command, directory, ...args], { env: {
@@ -474,4 +480,19 @@ test("the first deployment requires a distinct guard token and verifies it on th
   assert.equal(result.output.error, "cloudflare_deploy_unconfirmed");
   assert.equal(result.output.uncertain, true);
   assert.ok(sourceSecret);
+});
+
+test("deploy accepts the custom domain recorded in the manifest and refuses any other domain in the build", async t => {
+  const domain = "sandbox-runner.example.com";
+  const accepted = await fixture(t, "fresh", { vitest: true, index: true, domain, builtDomains: [domain] });
+  const result = await accepted.run(["--secrets-file", accepted.sourceSecret]);
+  assert.equal(result.status, 0, JSON.stringify(result.output));
+  assert.equal(result.output.status, "deployed");
+  for (const options of [{ domain, builtDomains: ["other.example.com"] }, { domain, builtDomains: [domain, "other.example.com"] },
+    { domain }, { builtDomains: [domain] }]) {
+    const refused = await fixture(t, "fresh", { vitest: true, index: true, ...options });
+    const outcome = await refused.run(["--secrets-file", refused.sourceSecret]);
+    assert.equal(outcome.output.error, "cloudflare_build_unverified", JSON.stringify(options));
+    assert(!outcome.calls.some(call => call.args[0] === "deploy" && !call.args.includes("--dry-run")));
+  }
 });

@@ -4,7 +4,7 @@ import { CliError, exit } from "./cli-errors.mjs";
 import { installationLimitBinding, workerVersionBinding } from "./cloudflare-project.mjs";
 
 const workerKeys = new Set([
-  "compatibilityDate", "compatibilityFlags", "env", "exports", "manifest", "name", "observability", "previewUrls", "workersDev",
+  "compatibilityDate", "compatibilityFlags", "domains", "env", "exports", "manifest", "name", "observability", "previewUrls", "workersDev",
 ]);
 
 export function invalidBuild() {
@@ -32,7 +32,7 @@ function localImage(reference, app) {
 }
 
 export async function inspectBuild(project, target) {
-  const { worker: workerName, maxConcurrentRuns, applications } = target;
+  const { worker: workerName, maxConcurrentRuns, applications, domain } = target;
   try {
     const root = join(project, ".cloudflare", "output", "v0");
     const settings = await readJson(join(root, "config.json"));
@@ -45,6 +45,9 @@ export async function inspectBuild(project, target) {
     const worker = await readJson(join(directory, "worker.config.json"));
     if (!record(worker) || worker.name !== workerName || worker.workersDev !== true || worker.previewUrls !== false ||
         Object.keys(worker).some(key => !workerKeys.has(key)) || !record(worker.env) || !record(worker.exports)) throw invalidBuild();
+    // The only route a build may carry is the custom domain recorded in the manifest.
+    if (domain === undefined ? worker.domains !== undefined
+      : !Array.isArray(worker.domains) || worker.domains.length !== 1 || worker.domains[0] !== domain) throw invalidBuild();
     if (worker.env.SANDBOX_RUNNER_MODE?.type !== "text" || worker.env.SANDBOX_RUNNER_MODE.value !== "real" ||
         worker.env.SANDBOX_RUNNER_TOKEN?.type !== "secret" || Object.keys(worker.env.SANDBOX_RUNNER_TOKEN).length !== 1 ||
         Object.entries(worker.env).some(([name, binding]) => {
