@@ -1,19 +1,28 @@
 # Sandbox Runner
 
-Run Claude Code, Codex and OpenCode in disposable sandboxes on your own Cloudflare account, with your subscription or an API key, and decide exactly what each run can reach.
+Run Claude Code, Codex and OpenCode in disposable sandboxes on your own Cloudflare account. Use your subscription or an API key. Decide what each run can reach.
 
-Start a run from a terminal, from Claude Code or Codex, or from ChatGPT and Claude. The agent works on a commit of your repository in its own container, and you get a report or a new branch back. Your machine does not need to stay on.
+## Why
 
-A sandbox, here, is a disposable Linux machine created for a single run: a Cloudflare Container, which [runs in its own virtual machine](https://developers.cloudflare.com/containers/architecture/). Inside it the agent can do anything it needs (install packages, run code, edit files), because nothing of yours is exposed: not your computer, not your network, not your credentials. When the run ends, the container is destroyed with everything in it. Nothing builds up on your own machine either, laptop or server: no clones or worktrees, no dependency folders or caches, no processes left running after each run.
+A coding agent needs real access to do useful work: a model account, your repository, sometimes other tools. The agent also reads content that nobody has reviewed. A prompt injection in that content can make the agent run code that you did not intend ([OWASP Top 10 for Agentic Applications](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/), ASI01 and ASI05).
 
-That is the current recommendation for running agents. A coding agent reads content nobody has reviewed, and a prompt injection in that content can make it run code you did not intend ([OWASP Top 10 for Agentic Applications](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/), ASI01 and ASI05). The answer is containment rather than trust: one isolated machine per agent, credentials held by a proxy outside it, and outbound traffic denied by default ([Anthropic's agent containment guidance](https://support.claude.com/en/articles/17316105)). Run on a laptop or a shared CI runner, the same agent has your files, your network and often your keys within reach.
+On a laptop, a VPS or a shared CI runner, that agent has your files, your network and often your keys within reach. Each run also leaves clones, worktrees, dependency folders and processes behind.
 
-- **Your subscription or your API key.** Claude Code and Codex run with a Claude or ChatGPT subscription, or with an API key, and can switch from one to the other when a quota runs out. OpenCode runs with an OpenAI or Anthropic key.
-- **Credentials the agent never sees.** The container has no internet access and holds placeholders. The Worker adds the real credentials to the few requests it allows: the model provider, a read-only fetch of your repository, and the connectors of that run.
-- **You decide what a run can do.** For each run or saved profile: the repository, model and effort, the MCP connectors, and for each connector the tool calls and arguments allowed. Reviews get read-only connector access. Publishing creates one new branch, from the Worker; the container never pushes.
-- **Independent reviews.** Review a commit with a different agent from the one that wrote it, for example Codex checking Claude Code's work.
-- **Tests in a sandbox.** Run a Vitest suite or a test command, with dependencies installed from the lockfile and the network closed while the tests run.
-- **A team without shared secrets.** Publish profiles and give each person or service only the ones they need. People sign in with their own identity through Cloudflare Access; scripts use their own tokens.
+The current recommendation is containment, not trust ([Anthropic's agent containment guidance](https://support.claude.com/en/articles/17316105)). Give each agent its own isolated machine. Keep the credentials in a proxy outside that machine. Block outbound traffic by default. Sandbox Runner applies this to everyday agent work.
+
+## What
+
+Each run gets a sandbox: a new Linux machine for that run only. It is a Cloudflare Container, which [runs in its own virtual machine](https://developers.cloudflare.com/containers/architecture/). The agent can install packages, run code and edit files in it. It cannot reach your computer, your network or your credentials. When the run ends, the Worker destroys the container and everything in it.
+
+- **Your subscription or your API key.** Claude Code and Codex use a Claude or ChatGPT subscription, or an API key. A run can change to the other credential when a quota runs out. OpenCode uses an OpenAI or Anthropic key.
+- **Credentials that the agent never sees.** The container has no internet access and holds placeholder values. The Worker adds the real credentials only to the requests that it allows. These are the model provider, a read-only fetch of your repository and the connectors of the run.
+- **Control of each run.** You set the repository, the model, the effort and the MCP connectors. For each connector, you set the tool calls and the arguments that the agent can use. Reviews get read-only connector access.
+- **Safe publication.** The container never pushes. The Worker creates one new branch from the changed files, after the container is gone.
+- **Independent reviews.** A different agent reviews the commit, for example Codex checks the work of Claude Code.
+- **Tests in a sandbox.** Run a Vitest suite or a test command. Dependencies come from the lockfile, and the network is closed while the tests run.
+- **Start from anywhere.** Use a terminal, Claude Code, Codex, ChatGPT or Claude. Your machine can be off during the run.
+- **Nothing left on your machine.** Your laptop or server runs only the client. Runs leave no files, folders, caches or processes on it.
+- **A team without shared secrets.** Give each person or service only the profiles that it needs. People sign in with their own identity through Cloudflare Access. Scripts use their own tokens.
 
 ```mermaid
 flowchart LR
@@ -23,7 +32,18 @@ flowchart LR
   worker -->|"adds credentials on allowed routes"| upstream["Model provider, GitHub, MCP servers"]
 ```
 
-Read the [security model](docs/security.md) for what is protected and what is not.
+The [security model](docs/security.md) tells what is protected and what is not.
+
+## How
+
+Install the CLI, deploy the Worker to your Cloudflare account, connect a model provider, then start runs. The [quick start](#quick-start) shows the four steps.
+
+Guides:
+
+- **Install and operate:** [set up the Worker](#set-up-the-worker), [check](#check-a-cloudflare-installation) or [remove](#remove-a-cloudflare-installation) an installation, [connect a provider](#connect-or-reconnect-a-provider), [choose an authentication strategy](#choose-an-authentication-strategy).
+- **Run work:** [run a prompt](#run-a-prompt), [use a private GitHub repository](#start-in-a-private-github-repository), [use MCP connectors](#use-mcp-connectors-in-claude-code-and-codex), [run Vitest](#run-a-vitest-suite) or [a test command](#run-a-test-command), [review a commit](#review-a-commit), [start OpenCode](#start-opencode).
+- **Share and automate:** [save a run configuration](#save-a-run-configuration), [share profiles with a team](#share-profiles-with-a-team), [install the skill](#install-the-sandbox-runner-skill).
+- **Contribute:** [test locally](#test-locally), [CONTRIBUTING.md](CONTRIBUTING.md), [RELEASING.md](RELEASING.md).
 
 ## Quick start
 
@@ -45,7 +65,7 @@ export SANDBOX_RUNNER_TOKEN=<control token>
 sandbox-runner claude start 'Summarize what a Durable Object is.'
 ```
 
-The sections below explain each step: the secrets file that setup needs, private repositories, connectors, reviews, tests and team profiles.
+The guides below explain each step, starting with the secrets file that setup needs.
 
 ## Set up the Worker
 
