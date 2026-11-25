@@ -9,7 +9,7 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "2.0.0-beta.v.15",
+    "@cloudflare/vite-plugin": "2.0.0-rc.1",
     "@modelcontextprotocol/client": "2.4.0",
     "cf": "1.0.0-beta.30",
     "typescript": "7.0.2",
